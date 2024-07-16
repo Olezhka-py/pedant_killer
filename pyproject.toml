@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "pedant-killer"
+version = "0.1.0"
+description = "Telegram bot for electronics repair"
+authors = ["Oleg Konovalov <oleg@gmail.com>", "Aleksandr Zakharchuk <mystang.pro@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.13.2"
+black = "^24.4.2"
+
+[tool.poetry.scripts]
+bot = "pedant_killer.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
