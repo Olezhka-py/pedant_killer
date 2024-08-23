@@ -3,7 +3,7 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
-from pedant_killer.кeyboards.for_question import (
+from pedant_killer.кeyboards.question import (
     get_users_phone,
     get_users_city,
     get_yes_or_no,

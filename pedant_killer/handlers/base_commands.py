@@ -4,7 +4,7 @@ from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from pedant_killer.кeyboards.for_question import get_users_target
+from pedant_killer.кeyboards.question import get_users_target
 
 base_router = Router()
 
