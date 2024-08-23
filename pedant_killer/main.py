@@ -1,11 +1,11 @@
 import asyncio
+import logging
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
-from handlers.common import rt_1
-from handlers.repair_or_diagnostic import rt_2
-from config_reader import config
-import logging
+from pedant_killer.handlers.base_commands import base_router
+from pedant_killer.handlers.repair_or_diagnostic import router_for_diagnostics
+from pedant_killer.config import config
 
 
 bot = Bot(
@@ -17,22 +17,22 @@ bot = Bot(
 
 dp = Dispatcher()
 
+logger = logging.getLogger()
+logging.basicConfig(
+    filename="pedant_killer.log",
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
-async def main() -> None:
-    dp.include_router(rt_1)
-    dp.include_router(rt_2)
-    logger.info("Starting")
+
+async def run() -> None:
+    dp.include_router(base_router)
+    dp.include_router(router_for_diagnostics)
+    logger.info("Bot started")
     await dp.start_polling(bot)
 
 
-if __name__ == "__main__":
-    logger = logging.getLogger()
-    logging.basicConfig(
-        filename="/Users/olezhka/PycharmProjects/pedant_killer/pedant_killer.log",  # Установи свой путь
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.INFO
-    )
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Exit")
+try:
+    asyncio.run(run())
+except KeyboardInterrupt:
+    logger.info("Exit")

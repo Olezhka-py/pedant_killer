@@ -1,10 +1,10 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
+from pydantic_settings import BaseSettings
 from pydantic import SecretStr
 
 
-class Settings(BaseSettings):
-    TG_API_DIGIT_SPACE_BOT: SecretStr
-    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+class Config(BaseSettings):
+    TG_API_DIGIT_SPACE_BOT: SecretStr = os.getenv('TG_API_DIGIT_SPACE_BOT')
 
 
-config = Settings()
+config = Config()

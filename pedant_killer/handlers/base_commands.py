@@ -6,10 +6,10 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from pedant_killer.кeyboards.for_question import get_users_target
 
-start_router_1 = Router()
+base_router = Router()
 
 
-@start_router_1.message(CommandStart())
+@base_router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
