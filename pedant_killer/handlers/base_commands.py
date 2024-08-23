@@ -1,15 +1,15 @@
+from random import choice
 from aiogram import Router
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
-from random import choice
 from pedant_killer.кeyboards.for_question import get_users_target
 
-rt_1 = Router()
+start_router_1 = Router()
 
 
-@rt_1.message(CommandStart())
+@start_router_1.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     await message.answer(
