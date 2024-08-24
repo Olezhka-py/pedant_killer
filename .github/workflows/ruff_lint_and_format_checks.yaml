@@ -29,7 +29,11 @@ jobs:
         run: poetry run python -m ruff check --output-format=github --exit-zero .
 
       - name: Run Ruff formatter
-        run: echo "```diff\n$(poetry run python -m ruff format --diff .)\n```" > ruff_diff.txt
+        run: |
+          echo "**Ruff Formatting Issues:**\n" >> ruff_diff.txt
+          echo "```diff\n" >> ruff_diff.txt
+          poetry run python -m ruff format --diff . >> ruff_diff.txt
+          echo "\n```\n" >> ruff_diff.txt
         continue-on-error: true
 
       - name: Upload Ruff diff as an artifact
@@ -43,8 +47,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            **Ruff Formatting Issues:**
-            ```diff
-            $(cat ruff_diff.txt)
-            ```
+          body-path: ruff_diff.txt
