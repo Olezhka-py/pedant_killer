@@ -27,5 +27,8 @@ jobs:
       - name: Run Ruff linter
         run: poetry run python -m ruff check --output-format=github --exit-zero .
 
+      - name: Register problem matcher
+        run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
+
       - name: Run Ruff formatter
-        run: poetry run python -m ruff format --check --diff --output-format=github .
+        run: poetry run python -m ruff format --check --diff .
