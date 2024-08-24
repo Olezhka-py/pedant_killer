@@ -30,10 +30,10 @@ jobs:
 
       - name: Run Ruff formatter
         run: |
-          echo "**Ruff Formatting Issues:**\n" >> ruff_diff.txt
-          echo "```diff\n" >> ruff_diff.txt
+          echo "**Ruff Formatting Issues:**" >> ruff_diff.txt
+          echo '```diff' >> ruff_diff.txt
           poetry run python -m ruff format --diff . >> ruff_diff.txt
-          echo "\n```\n" >> ruff_diff.txt
+          echo '```' >> ruff_diff.txt
         continue-on-error: true
 
       - name: Upload Ruff diff as an artifact
