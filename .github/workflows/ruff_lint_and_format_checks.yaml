@@ -27,8 +27,23 @@ jobs:
       - name: Run Ruff linter
         run: poetry run python -m ruff check --output-format=github --exit-zero .
 
-      - name: Register problem matcher
-        run: echo "::add-matcher::.github/workflows/matchers/ruff.json"
-
       - name: Run Ruff formatter
-        run: poetry run python -m ruff format --check --diff .
+        run: poetry run python -m ruff format --diff . > > ruff_diff.txt
+
+      - name: Upload Ruff diff as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ruff-diff
+          path: ruff_diff.txt
+
+      - name: Comment on pull request
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            **Ruff Formatting Issues:**
+            ```diff
+            $(cat ruff_diff.txt)
+            ```
