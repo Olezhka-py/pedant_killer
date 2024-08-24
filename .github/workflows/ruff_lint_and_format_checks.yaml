@@ -28,7 +28,7 @@ jobs:
         run: poetry run python -m ruff check --output-format=github --exit-zero .
 
       - name: Run Ruff formatter
-        run: poetry run python -m ruff format --diff . > > ruff_diff.txt
+        run: poetry run python -m ruff format --diff . > ruff_diff.txt
 
       - name: Upload Ruff diff as an artifact
         uses: actions/upload-artifact@v3
