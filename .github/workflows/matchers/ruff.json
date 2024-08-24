@@ -4,9 +4,9 @@
             "owner": "ruff",
             "pattern": [
                 {
-                    "regexp": "^(Would reformat): (.+)$",
-                    "message": 1,
-                    "file": 2
+                    "regexp": "\\+\\+\\+\\s(.+)\n@@.+@@\n+([\\s\\S]+?(?=---))",
+                    "message": 2,
+                    "file": 1
                 }
             ]
         }
