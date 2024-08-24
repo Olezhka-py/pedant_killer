@@ -26,9 +26,12 @@ jobs:
           poetry install --with=dev
 
       - name: Run Ruff linter
-        run: poetry run python -m ruff check --output-format=github --exit-zero .
+        id: ruff_linter
+        run: poetry run python -m ruff check --output-format=github .
+        continue-on-error: true
 
       - name: Run Ruff formatter
+        id: ruff_formatter
         run: |
           echo "**Ruff Formatting Issues:**" >> ruff_diff.txt
           echo '```diff' >> ruff_diff.txt
@@ -48,3 +51,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
           body-path: ruff_diff.txt
+
+      - name: Check for Failures
+        id: check_failures
+        run: |
+          # Check if any previous steps failed and set the job status accordingly
+          if [ ${{ steps.ruff_linter.outcome }} == 'failure' ] || [ ${{ steps.ruff_formatter.outcome }} == 'failure' ]; then
+            echo "##[error]One or more steps failed"
+            exit 1
+          fi
