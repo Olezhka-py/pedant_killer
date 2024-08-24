@@ -32,13 +32,12 @@ jobs:
         continue-on-error: true
 
       - name: Upload Ruff diff as an artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ruff-diff
           path: ruff_diff.txt
 
       - name: Comment on pull request
-        if: failure()
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
