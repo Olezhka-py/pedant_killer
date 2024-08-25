@@ -108,7 +108,7 @@ async def handle_invalid_number(message: Message) -> None:
 async def handle_location_to(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     await state.update_data(location_first=message.text)
-    await state.set_state(Repair.location_to)
+    await state.set_state(Repair.location_from)
     if data['city'].lower().strip() == 'москва':
         await message.answer(
             'Введите адрес, куда доставить: <b>Улица, Дом, Квартира</b>',
