@@ -2,18 +2,24 @@
 name = "pedant-killer"
 version = "0.1.0"
 description = "Telegram bot for electronics repair"
-authors = ["Oleg Konovalov <oleg@gmail.com>", "Aleksandr Zakharchuk <mystang.pro@gmail.com>"]
+authors = ["Oleg Konovalov <oleg.konovalov.04@mail.ru>", "Aleksandr Zakharchuk <mystang.pro@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+pydantic = "^2.8.2"
+aiogram = "^3.10.0"
+pydantic-settings = "^2.3.4"
+sqlalchemy = "^2.0.32"
+alembic = "^1.13.2"
+asyncpg = "^0.29.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
 black = "^24.4.2"
 
 [tool.poetry.scripts]
-bot = "pedant_killer.main:main"
+bot = "pedant_killer.main:run"
 
 [build-system]
 requires = ["poetry-core"]
