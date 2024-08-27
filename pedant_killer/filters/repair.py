@@ -6,7 +6,6 @@ from aiogram.types import Message
 
 class FilterYesNo(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-
         text = getattr(message, 'text', None)
         return text is not None and text.lower() in ('да', 'нет')
 

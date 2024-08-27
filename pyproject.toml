@@ -10,6 +10,9 @@ python = "^3.12"
 pydantic = "^2.8.2"
 aiogram = "^3.10.0"
 pydantic-settings = "^2.3.4"
+sqlalchemy = "^2.0.32"
+alembic = "^1.13.2"
+asyncpg = "^0.29.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"

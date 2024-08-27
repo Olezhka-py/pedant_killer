@@ -5,7 +5,6 @@ from pydantic import SecretStr
 
 
 class Config(BaseSettings):
-
     TG_API_DIGIT_SPACE_BOT: SecretStr = os.getenv('TG_API_DIGIT_SPACE_BOT')
 
 
