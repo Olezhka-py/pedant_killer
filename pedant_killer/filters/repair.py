@@ -12,10 +12,8 @@ class FilterYesNo(BaseFilter):
 
 class FilterPhoneNumber(BaseFilter):
     async def __call__(self, message: Message) -> bool:
-
         if getattr(message.contact, 'phone_number', None) is not None:
             return True
         else:
-
             phone_number_pattern = r'^(\+7|7|8)?[\s\-]?\(?[489][0-9]{2}\)?[\s\-]?[0-9]{3}[\s\-]?[0-9]{2}[\s\-]?[0-9]{2}$'
             return bool(re.match(phone_number_pattern, message.text))
