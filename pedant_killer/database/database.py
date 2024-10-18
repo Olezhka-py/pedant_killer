@@ -25,9 +25,8 @@ async_session_factory = async_sessionmaker(async_engine)
 
 def connection(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
     async def wrapper(*args, **kwargs):
-        # Проверяем, передан ли первый аргумент (self или cls)
         if len(args) > 0 and hasattr(args[0], "__class__"):
-            self_or_cls = args[0]  # Это может быть self или cls
+            self_or_cls = args[0]
         else:
             self_or_cls = None
 
