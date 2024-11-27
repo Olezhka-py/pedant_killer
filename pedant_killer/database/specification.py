@@ -1,4 +1,4 @@
-from database import Base
+from pedant_killer.database.database import Base
 
 
 class Specification:

@@ -17,6 +17,8 @@ psycopg = {extras = ["binary", "pool"], version = "^3.2.1"}
 psycopg2-binary = "^2.9.9"
 greenlet = "^3.0.3"
 requests = "^2.32.3"
+sqlalchemy2-stubs = "^0.0.2a38"
+mypy = "^1.13.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"

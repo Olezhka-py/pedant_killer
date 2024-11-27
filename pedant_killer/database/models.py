@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Annotated
 
-from sqlalchemy import ForeignKey, NUMERIC, func, and_
+from sqlalchemy import ForeignKey, NUMERIC, func, and_, Integer, or_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base, async_session_factory, config
+from pedant_killer.database.database import Base, async_session_factory, config
 
 
-intpk = Annotated[int, mapped_column(primary_key=True)]
+intpk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
 created_at = Annotated[datetime, mapped_column(server_default=func.now())]
 updated_at = Annotated[datetime, mapped_column(server_default=func.now(), onupdate=datetime.now)]
 
@@ -17,14 +17,14 @@ class ManufacturerOrm(Base):
 
     id: Mapped[intpk]
     name: Mapped[str]
-    description: Mapped[str]
+    description: Mapped[str | None] = None
 
 
 class DeviceTypeOrm(Base):
     __tablename__ = 'device_type'
     id: Mapped[intpk]
     name: Mapped[str]
-    description: Mapped[str]
+    description: Mapped[str | None] = None
 
 
 class ManufacturerDeviceTypeOrm(Base):
@@ -33,7 +33,7 @@ class ManufacturerDeviceTypeOrm(Base):
     manufacturer_id: Mapped[int] = mapped_column(ForeignKey('manufacturer.id'))
     device_type_id: Mapped[int] = mapped_column(ForeignKey('device_type.id'))
 
-    manufacturer: Mapped[ManufacturerOrm] = relationship()
+    manufacturer: Mapped[ManufacturerOrm] = relationship(foreign_keys=[manufacturer_id])
     device_type: Mapped[DeviceTypeOrm] = relationship()
 
 
@@ -41,7 +41,9 @@ class DeviceOrm(Base):
     __tablename__ = 'device'
     id: Mapped[intpk]
     manufacturer_device_type_id: Mapped[int] = mapped_column(ForeignKey('manufacturer_device_type.id'))
-    model: Mapped[str]
+    name_model: Mapped[str]
+
+    manufacturer_device_type: Mapped[ManufacturerDeviceTypeOrm] = relationship()
 
 
 class ServiceOrm(Base):
@@ -73,7 +75,7 @@ class DeviceServiceOrm(Base):
     device_id: Mapped[int] = mapped_column(ForeignKey('device.id'))
     service_id: Mapped[int] = mapped_column(ForeignKey('service.id'))
     price: Mapped[int]
-    work_duration: Mapped[int]
+    work_duration: Mapped[int | None] = None
 
     device: Mapped['DeviceOrm'] = relationship()
     service: Mapped['ServiceOrm'] = relationship()
@@ -88,26 +90,23 @@ class OrderOrm(Base):
     __tablename__ = 'order'
     id: Mapped[intpk]
     client_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
-    master_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
+    master_id: Mapped[int | None] = mapped_column(ForeignKey('user.id'), nullable=True)
     status_id: Mapped[int] = mapped_column(ForeignKey('order_status.id'))
-    created_add: Mapped[created_at]
+    created_at: Mapped[created_at]
     status_updated_at: Mapped[updated_at]
-    sent_from_address: Mapped[str]
-    return_to_address: Mapped[str]
-    comment: Mapped[str]
-    rating: Mapped[str]
+    sent_from_address: Mapped[str | None] = None
+    return_to_address: Mapped[str | None] = None
+    comment: Mapped[str | None] = None
+    rating: Mapped[str | None] = None
 
     user_client: Mapped['UserOrm'] = relationship(
-        back_populates='order_client',
+        back_populates='orders_client',
         foreign_keys=[client_id],
-        remote_side='UserOrm.id'
-
     )
 
     user_master: Mapped['UserOrm'] = relationship(
-        back_populates='order_master',
+        back_populates='orders_master',
         foreign_keys=[master_id],
-        remote_side='UserOrm.id'
     )
 
     status: Mapped['OrderStatusOrm'] = relationship(
@@ -125,7 +124,7 @@ class OrderStatusOrm(Base):
     __tablename__ = 'order_status'
     id: Mapped[intpk]
     name: Mapped[str]
-    description: Mapped[str]
+    description: Mapped[str | None] = None
 
     order: Mapped['OrderOrm'] = relationship(
         back_populates='status',
@@ -143,30 +142,27 @@ class UserOrm(Base):
     address: Mapped[str]
     phone: Mapped[str]
 
-    order_client: Mapped['OrderOrm'] = relationship(
+    orders_client: Mapped[list['OrderOrm']] = relationship(
         back_populates='user_client',
         foreign_keys=[OrderOrm.client_id],
         primaryjoin='and_('
                     'UserOrm.id == foreign(OrderOrm.client_id),'
-                    ' UserOrm.access_level_id == AccessLevelOrm.id,'
-                    ' AccessLevelOrm.importance == 10)',
+                    'UserOrm.access_level_id == foreign(AccessLevelOrm.id),'
+                    'UserOrm.access_level.has(importance=10))',
         viewonly=True
     )
 
-    order_master: Mapped['OrderOrm'] = relationship(
+    orders_master: Mapped[list['OrderOrm']] = relationship(
         back_populates='user_master',
         foreign_keys=[OrderOrm.master_id],
         primaryjoin='and_('
                     'UserOrm.id == foreign(OrderOrm.master_id),'
-                    ' UserOrm.access_level_id == AccessLevelOrm.id,'
-                    ' AccessLevelOrm.importance == 30)',
+                    'UserOrm.access_level_id == foreign(AccessLevelOrm.id),'
+                    'UserOrm.access_level.has(importance=30))',
         viewonly=True
     )
 
-    access_level: Mapped['AccessLevelOrm'] = relationship(
-        back_populates='user',
-        foreign_keys=[access_level_id]
-    )
+    access_level: Mapped['AccessLevelOrm'] = relationship()
 
 
 class AccessLevelOrm(Base):
@@ -175,9 +171,5 @@ class AccessLevelOrm(Base):
     name: Mapped[str]
     importance: Mapped[int]
 
-    user: Mapped['UserOrm'] = relationship(
-        back_populates='access_level',
-        foreign_keys=[UserOrm.access_level_id]
-    )
 
 
