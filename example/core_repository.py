@@ -28,27 +28,13 @@ class CoreRepository:
             database_logger.error(f'Ошибка при добавлении записи в таблицу {self._model_class}: {e}')
             return None
 
-    async def get_without_checks(self, instance_id: int) -> Base | None:
-        try:
-            stmt = select(self._model_class).filter_by(id=instance_id)
-            instance = await self._session.execute(stmt)
-            return instance.scalars().first()
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении записи из таблицы {self._model_class} по {instance_id}: {e}')
-            return None
-
     async def get(
         self,
         instance_id: int,
         specification: type[Specification] = ObjectExistsByIdSpecification,
     ) -> Base | None:
+        specification_compliance = specification.is_satisfied(instance_id=instance_id)
         try:
-            specification_compliance = await specification.is_satisfied(
-                self,
-                self._model_class,
-                instance_id,
-            )
             stmt = select(self._model_class).filter_by(**specification_compliance)
             instance = await self._session.execute(stmt)
             result = instance.scalars().first()
@@ -74,12 +60,8 @@ class CoreRepository:
         instance_id: int,
         specification: type[Specification] = ObjectExistsByIdSpecification,
     ) -> bool:
+        specification_compliance = specification.is_satisfied(instance_id=instance_id)
         try:
-            specification_compliance = await specification.is_satisfied(
-                self,
-                self._model_class,
-                instance_id,
-            )
             stmt = delete(self._model_class).filter_by(**specification_compliance)
             await self._session.execute(stmt)
             await self._session.commit()
