@@ -1,137 +1,116 @@
 import asyncio
+from typing import TYPE_CHECKING
 
-from pedant_killer.services.core import CoreMethod
-from pedant_killer.database.repository import ManufacturerRepository, DeviceServiceRepository
-from pedant_killer.database.models import DeviceServiceOrm, OrderOrm
+from pedant_killer.database.models import OrderOrm
 from pedant_killer.database.schemas import (DeviceServiceOrderRelDTO,
+                                            BaseIdDTO,
+                                            DeviceServicePostDTO,
                                             DeviceServiceDTO,
-                                            DeviceRelDTO,
-                                            ServiceRelDTO,
-                                            DeviceAndServiceRelDTO)
+                                            DeviceServiceDeviceRelDTO,
+                                            DeviceServiceServiceRelDTO,
+                                            DeviceServiceRelDTO)
+if TYPE_CHECKING:
+    from pedant_killer.database.repository import DeviceServiceRepository
+    from pedant_killer.database.models import DeviceServiceOrm
 
 
-class DeviceServiceService(CoreMethod):
-    async def save_device_service(self, device_id: int, service_id: int, price: int,
-                                  work_duration: int | None = None) -> [int | None]:
-        sorted_tables_arguments = self.checking_for_empty_attributes(
-            device_id=device_id,
-            service_id=service_id,
-            price=price,
-            work_duration=work_duration
-        )
-        if (sorted_tables_arguments is not None
-                and self.checking_correctness_type_int(*sorted_tables_arguments.values())):
-            repository = ManufacturerRepository()
-            return await repository.save(DeviceServiceOrm, **sorted_tables_arguments)
+class DeviceServiceService:
+    def __init__(self, repository: 'DeviceServiceRepository', model_orm: 'DeviceServiceOrm'):
+        self.repository = repository
+        self.model_orm = model_orm
 
-        return None
+    async def save_device_service(self, model_dto: DeviceServicePostDTO) -> [BaseIdDTO | None]:
+        result_orm = await self.repository.save(self.model_orm, **model_dto.dict())
 
-    async def save_relationship_device_service(self, device_service_id, order_id
-                                                ) -> [DeviceServiceOrderRelDTO | None]:
-        if self.checking_correctness_identifier(order_id, device_service_id):
-
-            repository = DeviceServiceRepository()
-            return await repository.save_device_service_order(OrderOrm,
-                                                              DeviceServiceOrm,
-                                                              order_id=order_id,
-                                                              device_service_id=device_service_id
-                                                              )
+        if result_orm:
+            return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    async def get_relationship_order(self, instance_id: int) -> [DeviceServiceDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = DeviceServiceRepository()
-            result_orm = await repository.get_order(DeviceServiceOrm, instance_id=instance_id)
+    async def save_relationship_device_service(self, device_service_id_dto: BaseIdDTO, order_id_dto: BaseIdDTO
+                                               ) -> [BaseIdDTO | None]:
+        result_orm = await self.repository.save_device_service_order(OrderOrm,
+                                                                     self.model_orm,
+                                                                     order_id=order_id_dto.id,
+                                                                     device_service_id=device_service_id_dto.id
+                                                                     )
 
-            if result_orm:
-                return [DeviceServiceOrderRelDTO.model_validate(result_orm, from_attributes=True)]
-
-        return None
-
-    async def get_device_service(self, instance_id: int) -> [DeviceServiceDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = DeviceServiceRepository()
-            result_orm = await repository.get(DeviceServiceOrm, instance_id=instance_id)
-
-            if result_orm:
-                return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:  # TODO: Сделать проверку метода
+            return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    async def get_relationship_device(self, instance_id: int) -> [DeviceRelDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = DeviceServiceRepository()
-            result_orm = await repository.get_device(DeviceServiceOrm, instance_id=instance_id)
+    async def get_relationship_order(self, device_service_id_dto: BaseIdDTO) -> [DeviceServiceOrderRelDTO | None]:
+        result_orm = await self.repository.get_order(self.model_orm, instance_id=device_service_id_dto.id)
 
-            if result_orm:
-                return [DeviceRelDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [DeviceServiceOrderRelDTO.model_validate(result_orm, from_attributes=True)]
 
-            return None
+        return None
 
-    async def get_relationship_service(self, instance_id: int) -> [ServiceRelDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = DeviceServiceRepository()
-            result_orm = await repository.get_service(DeviceServiceOrm, instance_id=instance_id)
+    async def get_device_service(self, model_dto: BaseIdDTO) -> [DeviceServiceDTO | None]:
+        result_orm = await self.repository.get(self.model_orm, instance_id=model_dto.id)
 
-            if result_orm:
-                return [ServiceRelDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
 
-            return None
+        return None
 
-    async def get_relationship_device_service(self, instance_id: int) -> [DeviceAndServiceRelDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = DeviceServiceRepository()
-            result_orm = await repository.get_device_service(DeviceServiceOrm, instance_id=instance_id)
+    async def get_relationship_device(self, model_dto: BaseIdDTO) -> [DeviceServiceDeviceRelDTO | None]:
+        result_orm = await self.repository.get_device(self.model_orm, instance_id=model_dto.id)
 
-            if result_orm:
-                return [DeviceAndServiceRelDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [DeviceServiceDeviceRelDTO.model_validate(result_orm, from_attributes=True)]
 
-            return None
+        return None
 
-    @staticmethod
-    async def get_all_manufacturer() -> [list[DeviceServiceDTO] | None]:
-        repository = DeviceServiceRepository()
-        result_orm = await repository.get_all(DeviceServiceOrm)
+    async def get_relationship_service(self, model_dto: BaseIdDTO) -> [DeviceServiceServiceRelDTO | None]:
+        result_orm = await self.repository.get_service(self.model_orm, instance_id=model_dto.id)
+
+        if result_orm:
+            return [DeviceServiceServiceRelDTO.model_validate(result_orm, from_attributes=True)]
+
+        return None
+
+    async def get_relationship_device_service(self, model_dto: BaseIdDTO) -> [DeviceServiceRelDTO | None]:
+        result_orm = await self.repository.get_device_service(self.model_orm, instance_id=model_dto.id)
+
+        if result_orm:
+            return [DeviceServiceRelDTO.model_validate(result_orm, from_attributes=True)]
+
+        return None
+
+    async def get_all_device_service(self) -> [list[DeviceServiceDTO] | None]:
+        result_orm = await self.repository.get_all(self.model_orm)
 
         if result_orm:
             return [DeviceServiceDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def delete_device_service(self, instance_id: int) -> [DeviceServiceDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = DeviceServiceRepository()
+    async def delete_device_service(self, model_dto: BaseIdDTO) -> [DeviceServiceDTO | None]:
+        async with asyncio.TaskGroup() as tg:
+            instance_task = tg.create_task(self.get_device_service(model_dto))
+            delete_task = tg.create_task(self.repository.delete(self.model_orm, instance_id=model_dto.id))
 
-            async with asyncio.TaskGroup() as tg:
-                instance_task = tg.create_task(self.get_device_service(instance_id))
-                delete_task = tg.create_task(repository.delete(DeviceServiceOrm, instance_id))
+        result_orm = await instance_task
+        await delete_task
 
-            result_orm = await instance_task
-            await delete_task
-
-            if result_orm:
-                return [DeviceServiceDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        if result_orm:
+            return [DeviceServiceDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def update_device_service(self, instance_id: int, device_id: int | None = None, service_id: int | None = None,
-                                    price: int | None = None, work_duration: int | None = None
-                                    ) -> [DeviceServiceDTO | None]:
-        sorted_tables_arguments = self.checking_for_empty_attributes(
-            device_id=device_id,
-            service_id=service_id,
-            price=price,
-            work_duration=work_duration
-        )
+    async def update_device_service(self, model_dto: DeviceServiceDTO) -> [DeviceServiceDTO | None]:
 
-        if (sorted_tables_arguments is not None and self.checking_correctness_identifier(instance_id)
-                and self.checking_correctness_type_int(*sorted_tables_arguments.values())):
-            repository = DeviceServiceRepository()
-            result_orm = await repository.update(DeviceServiceOrm, instance_id, **sorted_tables_arguments)
+        result_orm = await self.repository.update(self.model_orm,
+                                                  instance_id=model_dto.id,
+                                                  service_id=model_dto.service_id,
+                                                  device_id=model_dto.device_id,
+                                                  work_duration=model_dto.work_duration
+                                                  )
 
-            if result_orm:
-                return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
 
         return None
-

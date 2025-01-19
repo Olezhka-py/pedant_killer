@@ -1,6 +1,6 @@
 import asyncio
 
-from core import CoreMethod
+from pedant_killer.services.core_service import CoreMethod
 from pedant_killer.database.repository import OrderRepository
 from pedant_killer.database.models import OrderOrm, DeviceServiceOrm
 from pedant_killer.database.schemas import (DeviceServiceDTO,
@@ -10,7 +10,7 @@ from pedant_killer.database.schemas import (DeviceServiceDTO,
                                             OrderMasterRelDTO,
                                             OrderOrderStatusRelDTO,
                                             UserDTO)
-from user import UserService
+from user_service import UserService
 
 
 class OrderService(CoreMethod):

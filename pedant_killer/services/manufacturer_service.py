@@ -1,6 +1,6 @@
 import asyncio
 
-from core import CoreMethod
+from pedant_killer.services.core_service import CoreMethod
 from pedant_killer.database.repository import ManufacturerRepository
 from pedant_killer.database.models import ManufacturerOrm
 from pedant_killer.database.schemas import ManufacturerDTO
