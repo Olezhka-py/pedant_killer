@@ -13,6 +13,13 @@ pydantic-settings = "^2.3.4"
 sqlalchemy = "^2.0.32"
 alembic = "^1.13.2"
 asyncpg = "^0.29.0"
+psycopg = {extras = ["binary", "pool"], version = "^3.2.1"}
+psycopg2-binary = "^2.9.9"
+greenlet = "^3.0.3"
+requests = "^2.32.3"
+sqlalchemy2-stubs = "^0.0.2a38"
+mypy = "^1.13.0"
+dependency-injector = "^4.45.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
