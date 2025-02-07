@@ -1,163 +1,114 @@
 import asyncio
+from typing import TYPE_CHECKING
 
-from pedant_killer.services.core_service import CoreMethod
-from pedant_killer.database.repository import OrderRepository
-from pedant_killer.database.models import OrderOrm, DeviceServiceOrm
-from pedant_killer.database.schemas import (DeviceServiceDTO,
+from pedant_killer.database.schemas import (BaseIdDTO,
                                             OrderDTO,
                                             OrderDeviceServiceRelDTO,
                                             OrderClientRelDTO,
                                             OrderMasterRelDTO,
                                             OrderOrderStatusRelDTO,
-                                            UserDTO)
-from user_service import UserService
+                                            OrderPostDTO)
+if TYPE_CHECKING:
+    from pedant_killer.database.repository import OrderRepository
 
 
-class OrderService(CoreMethod):
-    async def save_order(self, client_id: int, master_id: int | None = None,  # TODO: Проверять, есть ли доступ у мастера
-                         status_id: int = 1,
-                         sent_from_address: str | None = None,
-                         return_to_address: str | None = None,
-                         comment: str | None = None,
-                         rating: str | None = None) -> [int | None]:
-        sorted_tables_arguments = self.checking_for_empty_attributes(
-            client_id=client_id,
-            master_id=master_id,
-            status_id=status_id,
-            sent_from_address=sent_from_address,
-            return_to_address=return_to_address,
-            comment=comment,
-            rating=rating
-        )
+class OrderService:
+    def __init__(self, repository: 'OrderRepository') -> None:
+        self._repository = repository
 
-        user = UserService()
-        master_access_level = await user.get_relationship_access_level(master_id)
-        client_access_level = await user.get_relationship_access_level(client_id)
+    async def save_order(self, model_dto: OrderPostDTO) -> list[BaseIdDTO] | None:
+        result_orm = await self._repository.save(**model_dto.dict())
 
-        if (sorted_tables_arguments is not None
-                and self.checking_correctness_identifier(client_id)
-                and master_access_level.access_level.importance == 30
-                and client_access_level.access_level.importance == 10):
-            repository = OrderRepository()
-            return await repository.save(OrderOrm, **sorted_tables_arguments)
+        if result_orm:
+            return [BaseIdDTO(id=result_orm)]
 
-        return None
+    # async def save_relationship_order_device_service(self, order_id: int,
+    #                                                  device_service_id: int) -> [DeviceServiceDTO | None]:
+    #     if self.checking_correctness_identifier(order_id, device_service_id):
+    #
+    #         repository = OrderRepository()
+    #         result_orm = await repository.save_order_device_service(OrderOrm,
+    #                                                                 DeviceServiceOrm,
+    #                                                                 order_id=order_id,
+    #                                                                 device_service_id=device_service_id
+    #                                                                 )
+    #
+    #         if result_orm:
+    #             return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
+    #
+    #     return None
 
-    async def save_relationship_order_device_service(self, order_id: int,
-                                                     device_service_id: int) -> [DeviceServiceDTO | None]:
-        if self.checking_correctness_identifier(order_id, device_service_id):
+    async def get_order(self, model_dto: BaseIdDTO) -> list[OrderDTO] | None:
+        result_orm = await self._repository.get(instance_id=model_dto.id)
 
-            repository = OrderRepository()
-            result_orm = await repository.save_order_device_service(OrderOrm,
-                                                                    DeviceServiceOrm,
-                                                                    order_id=order_id,
-                                                                    device_service_id=device_service_id
-                                                                    )
-
-            if result_orm:
-                return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [OrderDTO.model_validate(result_orm, from_attributes=True)]
 
         return None
 
-    async def get_order(self, instance_id: int) -> [OrderDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderRepository()
-            result_orm = await repository.get(OrderOrm, instance_id=instance_id)
+    async def get_relationship_device_service(self, model_dto: BaseIdDTO) -> list[OrderDeviceServiceRelDTO] | None:
+        result_orm = await self._repository.get_order_device_service(instance_id=model_dto.id)
 
-            if result_orm:
-                return [OrderDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [OrderDeviceServiceRelDTO.model_validate(result_orm, from_attributes=True)]
 
         return None
 
-    async def get_relationship_device_service(self, instance_id: int) -> [OrderDeviceServiceRelDTO | None]:
+    async def get_relationship_client(self, model_dto: BaseIdDTO) -> list[OrderClientRelDTO] | None:
+        result_orm = await self._repository.get_client(instance_id=model_dto.id)
 
-        if self.checking_correctness_identifier(instance_id):
+        if result_orm:
+            return [OrderClientRelDTO.model_validate(result_orm, from_attributes=True)]
 
-            repository = OrderRepository()
-            result_orm = await repository.get_order_device_service(OrderOrm, instance_id=instance_id)
+        return None
 
-            if result_orm:
-                return [OrderDeviceServiceRelDTO.model_validate(result_orm, from_attributes=True)]
+    async def get_relationship_master(self, model_dto: BaseIdDTO) -> list[OrderMasterRelDTO] | None:
+        result_orm = await self._repository.get_master(instance_id=model_dto.id)
 
-    async def get_relationship_client(self, instance_id: int) -> [OrderClientRelDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderRepository()
-            result_orm = await repository.get_client(OrderOrm, instance_id=instance_id)
+        if result_orm:
+            return [OrderMasterRelDTO.model_validate(result_orm, from_attributes=True)]
 
-            if result_orm:
-                return [OrderClientRelDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        return None
 
-            return None
+    async def get_relationship_status(self, model_dto: BaseIdDTO) -> list[OrderOrderStatusRelDTO] | None:
+        result_orm = await self._repository.get_status(instance_id=model_dto.id)
 
-    async def get_relationship_master(self, instance_id: int) -> [OrderMasterRelDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderRepository()
-            result_orm = await repository.get_master(OrderOrm, instance_id=instance_id)
+        if result_orm:
+            return [OrderOrderStatusRelDTO.model_validate(result_orm, from_attributes=True)]
 
-            if result_orm:
-                return [OrderMasterRelDTO.model_validate(result_orm, from_attributes=True)]
-
-            return None
-
-    async def get_relationship_status(self, instance_id: int) -> [OrderOrderStatusRelDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderRepository()
-            result_orm = await repository.get_status(OrderOrm, instance_id)
-
-            if result_orm:
-                return [OrderOrderStatusRelDTO.model_validate(result_orm, from_attributes=True)]
-
-    @staticmethod
-    async def get_all_orders() -> [list[UserDTO] | None]:
-        repository = OrderRepository()
-        result_orm = await repository.get_all(OrderOrm)
+    async def get_all_orders(self) -> list[OrderDTO] | None:
+        result_orm = await self._repository.get_all()
 
         if result_orm:
             return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def delete_order(self, instance_id: int) -> [OrderDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderRepository()
+    async def delete_order(self, model_dto: BaseIdDTO) -> list[OrderDTO] | None:
+        async with asyncio.TaskGroup() as tg:
+            instance_task = tg.create_task(self.get_order(model_dto=model_dto))
+            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
 
-            async with asyncio.TaskGroup() as tg:
-                instance_task = tg.create_task(self.get_order(instance_id))
-                delete_task = tg.create_task(repository.delete(OrderOrm, instance_id))
+        result_orm = await instance_task
+        await delete_task
 
-            result_orm = await instance_task
-            await delete_task
-
-            if result_orm:
-                return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        if result_orm:
+            return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def update_order(self, instance_id: int,
-                           client_id: int,
-                           master_id: int | None = None,
-                           status_id: int = 1,
-                           sent_from_address: str | None = None,
-                           return_to_address: str | None = None,
-                           comment: str | None = None,
-                           rating: str | None = None
-                           ) -> [OrderDTO | None]:  # TODO: Нужно сделать нормальную проверку
-        sorted_tables_arguments = self.checking_for_empty_attributes(
-            client_id=client_id,
-            master_id=master_id,
-            status_id=status_id,
-            sent_from_address=sent_from_address,
-            return_to_address=return_to_address,
-            comment=comment,
-            rating=rating
-        )
+    async def update_order(self, model_dto: OrderDTO) -> list[OrderDTO] | None:
+        result_orm = await self._repository.update(instance_id=model_dto.id,
+                                                   client_id=model_dto.client_id,
+                                                   master_id=model_dto.master_id,
+                                                   status_id=model_dto.status_id,
+                                                   sent_from_address=model_dto.sent_from_address,
+                                                   return_to_address=model_dto.return_to_address,
+                                                   comment=model_dto.comment,
+                                                   rating=model_dto.rating)
 
-        if sorted_tables_arguments is not None and self.checking_correctness_identifier(instance_id):
-            repository = OrderRepository()
-            result_orm = await repository.update(OrderOrm, instance_id, **sorted_tables_arguments)
-
-            if result_orm:
-                return [OrderDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [OrderDTO.model_validate(result_orm, from_attributes=True)]
 
         return None
 

@@ -1,54 +1,49 @@
 import asyncio
+from typing import TYPE_CHECKING
 
-from pedant_killer.services.core_service import CoreMethod
-from pedant_killer.database.repository import OrderStatusRepository
-from pedant_killer.database.models import OrderStatusOrm
-from pedant_killer.database.schemas import OrderStatusDTO
+from pedant_killer.database.schemas import OrderStatusPostDTO, OrderStatusDTO, BaseIdDTO
+if TYPE_CHECKING:
+    from pedant_killer.database.repository import OrderStatusRepository
 
 
-class OrderStatusService(CoreMethod):
-    async def save_order_status(self, name: str, description: str | None = None) -> [int | None]:
-        sorted_tables_arguments = self.checking_for_empty_attributes(name=name, description=description)
+class OrderStatusService:
+    def __init__(self, repository: 'OrderStatusRepository') -> None:
+        self._repository = repository
 
-        if (sorted_tables_arguments is not None
-                and self.checking_correctness_type_str(*sorted_tables_arguments.values())):
-            repository = OrderStatusRepository()
-            return await repository.save(OrderStatusOrm, **sorted_tables_arguments)
+    async def save_order_status(self, model_dto: OrderStatusPostDTO) -> list[BaseIdDTO] | None:
+        result_orm = await self._repository.save(**model_dto.dict())
 
-        return None
-
-    async def get_order_status(self, instance_id: int) -> [OrderStatusDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderStatusRepository()
-            result_orm = await repository.get(OrderStatusOrm, instance_id=instance_id)
-
-            if result_orm:
-                return [OrderStatusDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    @staticmethod
-    async def get_all_order_status() -> [list[OrderStatusDTO] | None]:
-        repository = OrderStatusRepository()
-        result_orm = await repository.get_all(OrderStatusOrm)
+    async def get_order_status(self, model_dto: BaseIdDTO) -> list[OrderStatusDTO] | None:
+        result_orm = await self._repository.get(instance_id=model_dto.id)
+
+        if result_orm:
+            return [OrderStatusDTO.model_validate(result_orm, from_attributes=True)]
+
+        return None
+
+    async def get_all_order_status(self) -> list[OrderStatusDTO] | None:
+        result_orm = await self._repository.get_all()
 
         if result_orm:
             return [OrderStatusDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def delete_order_status(self, instance_id: int) -> [OrderStatusDTO | None]:
-        if self.checking_correctness_identifier(instance_id):
-            repository = OrderStatusRepository()
+    async def delete_order_status(self, model_dto: BaseIdDTO) -> list[OrderStatusDTO] | None:
 
-            async with asyncio.TaskGroup() as tg:
-                instance_task = tg.create_task(self.get_order_status(instance_id))
-                delete_task = tg.create_task(repository.delete(OrderStatusRepository, instance_id=instance_id))
+        async with asyncio.TaskGroup() as tg:
+            instance_task = tg.create_task(self.get_order_status(model_dto))
+            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
 
-            instance = await instance_task
-            await delete_task
+        instance = await instance_task
+        await delete_task
 
-            if instance:
-                return [OrderStatusDTO.model_validate(row, from_attributes=True) for row in instance]
+        if instance:
+            return [OrderStatusDTO.model_validate(row, from_attributes=True) for row in instance]
 
         return None

@@ -1,5 +1,4 @@
 from pedant_killer.services.access_level_service import AccessLevelService
-from pedant_killer.services.core_service import CoreMethod
 from pedant_killer.services.device_service import DeviceService
 from pedant_killer.services.device_service_service import DeviceServiceService
 from pedant_killer.services.device_type_service import DeviceTypeService
@@ -9,3 +8,4 @@ from pedant_killer.services.order_service import OrderService
 from pedant_killer.services.order_status_service import OrderStatusService
 from pedant_killer.services.service_service import ServiceService
 from pedant_killer.services.user_service import UserService
+
