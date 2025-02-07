@@ -1,34 +1,39 @@
-from datetime import datetime
-from typing import Optional
+from typing import Any
 
-from pydantic import BaseModel
+from datetime import datetime
+from phonenumbers import is_valid_number, parse
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class BaseIdDTO(BaseModel):
+    id: int = Field(ge=1)
 
 
 class ManufacturerPostDTO(BaseModel):
     name: str
-    description: str | None
+    description: str | None = None
 
 
-class ManufacturerDTO(ManufacturerPostDTO):
-    id: int
+class ManufacturerDTO(BaseIdDTO, ManufacturerPostDTO):
+    pass
 
 
 class DeviceTypePostDTO(BaseModel):
     name: str
-    description: str | None
+    description: str | None = None
 
 
-class DeviceTypeDTO(DeviceTypePostDTO):
-    id: int
+class DeviceTypeDTO(BaseIdDTO, DeviceTypePostDTO):
+    pass
 
 
 class ManufacturerDeviceTypePostDTO(BaseModel):
-    manufacturer_id: int
-    device_type_id: int
+    manufacturer_id: int = Field(ge=1)
+    device_type_id: int = Field(ge=1)
 
 
-class ManufacturerDeviceTypeDTO(ManufacturerDeviceTypePostDTO):
-    id: int
+class ManufacturerDeviceTypeDTO(BaseIdDTO, ManufacturerDeviceTypePostDTO):
+    pass
 
 
 class ManufacturerRelDTO(ManufacturerDeviceTypeDTO):
@@ -39,21 +44,21 @@ class DeviceTypeRelDTO(ManufacturerDeviceTypeDTO):
     device_type: DeviceTypeDTO
 
 
-class ManufacturerAndDeviceTypeRelDTO(ManufacturerRelDTO, DeviceTypeRelDTO):
+class ManufacturerDeviceTypeRelDTO(ManufacturerRelDTO, DeviceTypeRelDTO):
     pass
 
 
 class DevicePostDTO(BaseModel):
-    manufacturer_device_type_id: int
+    manufacturer_device_type_id: int = Field(ge=1)
     name_model: str
 
 
-class DeviceDTO(DevicePostDTO):
-    id: int
+class DeviceDTO(BaseIdDTO, DevicePostDTO):
+    pass
 
 
-class ManufacturerDeviceTypeRelDTO(DeviceDTO):
-    manufacturer_device_type: ManufacturerAndDeviceTypeRelDTO | None
+class DeviceManufacturerDeviceTypeRelDTO(DeviceDTO):
+    manufacturer_device_type: ManufacturerDeviceTypeRelDTO | None
 
 
 class ServicePostDTO(BaseModel):
@@ -61,30 +66,30 @@ class ServicePostDTO(BaseModel):
     description: str | None = None
 
 
-class ServiceDTO(ServicePostDTO):
-    id: int
+class ServiceDTO(BaseIdDTO, ServicePostDTO):
+    pass
 
 
 class DeviceServicePostDTO(BaseModel):
-    device_id: int
-    service_id: int
-    price: int
-    work_duration: int | None = None
+    device_id: int = Field(ge=1)
+    service_id: int = Field(ge=1)
+    price: int = Field(ge=0)
+    work_duration: int | None = Field(default=None, ge=1)
 
 
-class DeviceServiceDTO(DeviceServicePostDTO):
-    id: int
+class DeviceServiceDTO(BaseIdDTO, DeviceServicePostDTO):
+    pass
 
 
-class DeviceRelDTO(DeviceServiceDTO):
-    device: ManufacturerDeviceTypeRelDTO
+class DeviceServiceDeviceRelDTO(DeviceServiceDTO):
+    device: DeviceManufacturerDeviceTypeRelDTO
 
 
-class ServiceRelDTO(DeviceServiceDTO):
+class DeviceServiceServiceRelDTO(DeviceServiceDTO):
     service: ServiceDTO
 
 
-class DeviceAndServiceRelDTO(DeviceRelDTO, ServiceRelDTO):
+class DeviceServiceRelDTO(DeviceServiceDeviceRelDTO, DeviceServiceServiceRelDTO):
     pass
 
 
@@ -93,37 +98,46 @@ class AccessLevelPostDTO(BaseModel):
     importance: int
 
 
-class AccessLevelDTO(AccessLevelPostDTO):
-    id: int
+class AccessLevelDTO(BaseIdDTO, AccessLevelPostDTO):
+    pass
 
 
 class UserPostDTO(BaseModel):
-    access_level_id: int
+    access_level_id: int = Field(ge=1)
     telegram_username: str
     telegram_id: str
     full_name: str
-    address: str
+    address: str | None = None
     phone: str
 
+    @field_validator('phone')
+    def is_valid_phone_number(cls, phone: Any) -> str | None:
+        parsed_number = parse(phone, None)
 
-class UserDTO(UserPostDTO):
-    id: int
+        if is_valid_number(parsed_number):
+            return phone
+
+        raise ValueError(f'Некорректный номер телефона: {phone}')
+
+
+class UserDTO(BaseIdDTO, UserPostDTO):
+    pass
 
 
 class OrderPostDTO(BaseModel):
-    client_id: int
-    master_id: int
-    status_id: int
+    client_id: int = Field(ge=1)
+    master_id: int = Field(ge=1)
+    status_id: int = Field(ge=1)
     created_at: datetime
     status_updated_at: datetime
-    sent_from_address: str
-    return_to_address: str
-    comment: str
-    rating: int
+    sent_from_address: str | None = None
+    return_to_address: str | None = None
+    comment: str | None = None
+    rating: int | None = Field(ge=1, le=10, default=None)
 
 
-class OrderDTO(OrderPostDTO):
-    id: int
+class OrderDTO(BaseIdDTO, OrderPostDTO):
+    pass
 
 
 class OrderStatusPostDTO(BaseModel):
@@ -131,13 +145,16 @@ class OrderStatusPostDTO(BaseModel):
     description: str | None = None
 
 
-class OrderStatusDTO(OrderStatusPostDTO):
-    id: int
+class OrderStatusDTO(BaseIdDTO, OrderStatusPostDTO):
+    pass
 
 
-class OrderDeviceServicePostDTO(BaseModel):
-    order_id: int
-    device_service_id: int
+class DeviceServiceOrderRelDTO(DeviceServiceDTO):
+    order: list[OrderDTO] | None = None
+
+
+class OrderDeviceServiceRelDTO(OrderDTO):
+    device_service: list[DeviceServiceDTO] | None = None
 
 
 class AccessLevelRelDTO(UserDTO):
@@ -152,10 +169,25 @@ class UserOrdersMasterRelDTO(UserDTO):
     orders_master: list[OrderDTO] | None = None
 
 
-class UserAllRelDTO(UserOrdersClientRelDTO, UserOrdersMasterRelDTO):
+class UserAccessLevelRelDTO(UserDTO):
+    access_level: AccessLevelDTO
+
+
+class UserAllRelDTO(UserOrdersClientRelDTO, UserOrdersMasterRelDTO, AccessLevelDTO):
     pass
 
 
+class OrderMasterRelDTO(OrderDTO):
+    user_master: UserDTO | None = None
 
 
+class OrderClientRelDTO(OrderDTO):
+    user_client: UserDTO
 
+
+class OrderOrderStatusRelDTO(OrderDTO):
+    status: OrderStatusDTO
+
+
+class OrderAllRelDTO:
+    pass

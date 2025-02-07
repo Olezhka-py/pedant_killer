@@ -3,6 +3,7 @@ name = "pedant-killer"
 version = "0.1.0"
 description = "Telegram bot for electronics repair"
 authors = ["Oleg Konovalov <oleg.konovalov.04@mail.ru>", "Aleksandr Zakharchuk <mystang.pro@gmail.com>"]
+packages = [{include = "pedant_killer"}]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -10,19 +11,21 @@ python = "^3.12"
 pydantic = "^2.8.2"
 aiogram = "^3.10.0"
 pydantic-settings = "^2.3.4"
-sqlalchemy = "^2.0.32"
+sqlalchemy = {extras = ["mypy"], version = "^2.0.37"}
 alembic = "^1.13.2"
 asyncpg = "^0.29.0"
 psycopg = {extras = ["binary", "pool"], version = "^3.2.1"}
 psycopg2-binary = "^2.9.9"
 greenlet = "^3.0.3"
 requests = "^2.32.3"
-sqlalchemy2-stubs = "^0.0.2a38"
 mypy = "^1.13.0"
+dependency-injector = "^4.45.0"
+phonenumbers = "^8.13.54"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
 black = "^24.4.2"
+mypy = "^1.14.1"
 
 [tool.poetry.scripts]
 bot = "pedant_killer.main:run"
@@ -30,3 +33,12 @@ bot = "pedant_killer.main:run"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+#[tool.mypy]
+#python_version = "3.12"
+#strict = true
+#show_error_codes = true
+#warn_unused_configs = true
+#warn_unused_ignores = true
+#exclude = "tests/"
+#plugins = ["sqlalchemy.ext.mypy.plugin"]

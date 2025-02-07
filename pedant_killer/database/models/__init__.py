@@ -1,12 +1,13 @@
-from datetime import datetime
-from typing import Annotated
+from pedant_killer.database.models.access_level_orm import AccessLevelOrm
+from pedant_killer.database.models.device_orm import DeviceOrm
+from pedant_killer.database.models.device_service_orm import DeviceServiceOrm
+from pedant_killer.database.models.device_type_orm import DeviceTypeOrm
+from pedant_killer.database.models.manufacturer_orm import ManufacturerOrm
+from pedant_killer.database.models.manufacturer_device_type_orm import ManufacturerDeviceTypeOrm
+from pedant_killer.database.models.order_orm import OrderOrm
+from pedant_killer.database.models.order_device_service_orm import OrderDeviceServiceOrm
+from pedant_killer.database.models.order_status_orm import OrderStatusOrm
+from pedant_killer.database.models.service_orm import ServiceOrm
+from pedant_killer.database.models.user_orm import UserOrm
+import pedant_killer.database.models.annotated
 
-from sqlalchemy import ForeignKey, NUMERIC, func, and_, Integer, or_, Table, Column, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from pedant_killer.database.database import Base, async_session_factory, config
-
-
-intpk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
-created_at = Annotated[datetime, mapped_column(server_default=func.now())]
-updated_at = Annotated[datetime, mapped_column(server_default=func.now(), onupdate=datetime.now)]

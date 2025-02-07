@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped
 
-from . import intpk
+from pedant_killer.database.models.annotated import intpk
 from pedant_killer.database.database import Base
 
 

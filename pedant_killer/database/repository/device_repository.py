@@ -1,42 +1,38 @@
-from typing import Type
-
-
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from core import CoreRepository
-from pedant_killer.database.database import database_logger, connection
+from pedant_killer.database.repository.core_repository import CoreRepository
+from pedant_killer.database.database import database_logger
 from pedant_killer.database.specification import Specification, ObjectExistsByIdSpecification
-from pedant_killer.database.models.device import DeviceOrm
-from pedant_killer.database.models.manufacturer_device_type import ManufacturerDeviceTypeOrm
+from pedant_killer.database.models.manufacturer_device_type_orm import ManufacturerDeviceTypeOrm
+from pedant_killer.database.models.device_orm import DeviceOrm
 
 
-class DeviceRepository(CoreRepository):
-    @connection
-    async def get_manufacturer_device_type(self, session: AsyncSession,
-                                           model: Type[DeviceOrm],
-                                           instance_id: int,
-                                           specification: Type[Specification] = ObjectExistsByIdSpecification
-                                           ) -> [ManufacturerDeviceTypeOrm | None]:
+class DeviceRepository(CoreRepository[DeviceOrm]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session=session, model_orm=DeviceOrm)
+
+    async def get_manufacturer_device_type(self, instance_id: int,
+                                           specification: type[Specification] = ObjectExistsByIdSpecification
+                                           ) -> 'DeviceOrm | None':
         try:
-            stmt = (select(model)
+            stmt = (select(self._model_orm)
                     .options(
-                        joinedload(model.manufacturer_device_type)
+                        joinedload(self._model_orm.manufacturer_device_type)
                         .joinedload(ManufacturerDeviceTypeOrm.manufacturer),
 
-                        joinedload(model.manufacturer_device_type)
+                        joinedload(self._model_orm.manufacturer_device_type)
                         .joinedload(ManufacturerDeviceTypeOrm.device_type)
                     )
-                    .filter_by(**await specification.is_satisfied(self, model, instance_id)))
-            instance = await session.execute(stmt)
+                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+            instance = await self._session.execute(stmt)
             result = instance.scalars().first()
             return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении типа устройства и устройства через relationship'
-                                  f'из таблицы:{model}'
+                                  f'из таблицы:{self._model_orm}'
                                   f'по id:{instance_id}: {e}')
         return None
-

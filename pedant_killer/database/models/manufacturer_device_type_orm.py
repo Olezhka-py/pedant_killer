@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 
 from pedant_killer.database.database import Base
-from . import intpk
-from manufacturer import ManufacturerOrm
-from device_type import DeviceTypeOrm
+from pedant_killer.database.models.annotated import intpk
+if TYPE_CHECKING:
+    from pedant_killer.database.models.manufacturer_orm import ManufacturerOrm
+    from pedant_killer.database.models.device_type_orm import DeviceTypeOrm
 
 
 class ManufacturerDeviceTypeOrm(Base):
@@ -13,5 +16,5 @@ class ManufacturerDeviceTypeOrm(Base):
     manufacturer_id: Mapped[int] = mapped_column(ForeignKey('manufacturer.id'))
     device_type_id: Mapped[int] = mapped_column(ForeignKey('device_type.id'))
 
-    manufacturer: Mapped[ManufacturerOrm] = relationship(foreign_keys=[manufacturer_id])
-    device_type: Mapped[DeviceTypeOrm] = relationship()
+    manufacturer: Mapped['ManufacturerOrm'] = relationship(foreign_keys=[manufacturer_id])
+    device_type: Mapped['DeviceTypeOrm'] = relationship()

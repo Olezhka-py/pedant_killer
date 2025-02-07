@@ -1,17 +1,20 @@
-from sqlalchemy.orm import Mapped, relationship
+from typing import TYPE_CHECKING
 
-from . import intpk
+from sqlalchemy.orm import Mapped, relationship, mapped_column
+
+from pedant_killer.database.models.annotated import intpk
 from pedant_killer.database.database import Base
-from order import OrderOrm
+if TYPE_CHECKING:
+    from pedant_killer.database.models.order_orm import OrderOrm
 
 
 class OrderStatusOrm(Base):
     __tablename__ = 'order_status'
     id: Mapped[intpk]
     name: Mapped[str]
-    description: Mapped[str | None] = None
+    description: Mapped[str | None] = mapped_column(default=None)
 
     order: Mapped['OrderOrm'] = relationship(
         back_populates='status',
-        foreign_keys=[OrderOrm.status_id]
+        foreign_keys='OrderOrm.status_id'
     )

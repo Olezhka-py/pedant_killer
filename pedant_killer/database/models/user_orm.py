@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
-from . import intpk
+from pedant_killer.database.models.annotated import intpk
 from pedant_killer.database.database import Base
-from order import OrderOrm
-from access_level import AccessLevelOrm
+if TYPE_CHECKING:
+    from pedant_killer.database.models.order_orm import OrderOrm
+    from pedant_killer.database.models.access_level_orm import AccessLevelOrm
 
 
 class UserOrm(Base):
@@ -19,13 +22,13 @@ class UserOrm(Base):
 
     orders_client: Mapped[list['OrderOrm'] | None] = relationship(
         back_populates='user_client',
-        foreign_keys=[OrderOrm.client_id],
+        foreign_keys='OrderOrm.client_id',
         viewonly=True
     )
 
     orders_master: Mapped[list['OrderOrm'] | None] = relationship(
         back_populates='user_master',
-        foreign_keys=[OrderOrm.master_id],
+        foreign_keys='OrderOrm.master_id',
         viewonly=True
     )
 

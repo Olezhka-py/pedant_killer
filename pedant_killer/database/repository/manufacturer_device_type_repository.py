@@ -1,68 +1,67 @@
-from typing import Type
+from typing import TYPE_CHECKING
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from core import CoreRepository
-from pedant_killer.database.database import database_logger, connection
+from pedant_killer.database.repository.core_repository import CoreRepository
+from pedant_killer.database.database import database_logger
 from pedant_killer.database.specification import Specification, ObjectExistsByIdSpecification
-from pedant_killer.database.models.device_type import DeviceTypeOrm
-from pedant_killer.database.models.manufacturer_device_type import ManufacturerDeviceTypeOrm
+from pedant_killer.database.models.manufacturer_device_type_orm import ManufacturerDeviceTypeOrm
 
 
-class ManufacturerDeviceTypeRepository(CoreRepository):
-    @connection
-    async def get_manufacturer(self, session: AsyncSession, model: Type[ManufacturerDeviceTypeOrm], instance_id: int,
-                               specification: Type[Specification] = ObjectExistsByIdSpecification
-                               ) -> [ManufacturerDeviceTypeOrm | None]:
+class ManufacturerDeviceTypeRepository(CoreRepository[ManufacturerDeviceTypeOrm]):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session=session, model_orm=ManufacturerDeviceTypeOrm)
+
+    async def get_manufacturer(self, instance_id: int,
+                               specification: type[Specification] = ObjectExistsByIdSpecification
+                               ) -> 'ManufacturerDeviceTypeOrm | None':
         try:
-            stmt = (select(model).options(joinedload(model.manufacturer))
-                    .filter_by(**await specification.is_satisfied(self, model, instance_id)))
-            instance = await session.execute(stmt)
+            stmt = (select(self._model_orm).options(joinedload(self._model_orm.manufacturer))
+                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+            instance = await self._session.execute(stmt)
             result = instance.scalars().first()
-            database_logger.info(f'Данные из таблицы {model} с устройствами получены')  # TODO: Добавить проверку существует ли manufacturer с таким id
+            database_logger.info(f'Данные из таблицы {self._model_orm} с устройствами получены')  # TODO: Добавить проверку существует ли manufacturer с таким id
             return result
 
         except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении устройства через relationship из таблицы: {model} по id:'
+            database_logger.error(f'Ошибка при получении устройства через relationship из таблицы:'
+                                  f' {self._model_orm} по id:'
                                   f' {instance_id}: {e}')
             return None
 
-    @connection
-    async def get_device_type(self, session: AsyncSession, model: Type[ManufacturerDeviceTypeOrm], instance_id: int,
-                              specification: Type[Specification] = ObjectExistsByIdSpecification
-                              ) -> [DeviceTypeOrm | None]:
+    async def get_device_type(self, instance_id: int,
+                              specification: type[Specification] = ObjectExistsByIdSpecification
+                              ) -> 'ManufacturerDeviceTypeOrm | None':
         try:
-            stmt = (select(model).options(joinedload(model.device_type))
-                    .filter_by(**await specification.is_satisfied(self, model, instance_id)))
-            instance = await session.execute(stmt)
+            stmt = (select(self._model_orm).options(joinedload(self._model_orm.device_type))
+                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+            instance = await self._session.execute(stmt)
             result = instance.scalars().first()
             return result
 
         except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении типа устройства через relationship из таблицы: {model} по id:'
-                              f' {instance_id}: {e}')
+            database_logger.error(f'Ошибка при получении типа устройства через relationship из таблицы:'
+                                  f' {self._model_orm} по id:'
+                                  f' {instance_id}: {e}')
             return None
 
-    @connection
-    async def get_manufacturer_device_type(self, session: AsyncSession, model: Type[ManufacturerDeviceTypeOrm],
-                                                instance_id: int,
-                                                specification: Type[Specification] = ObjectExistsByIdSpecification
-                                               ) -> [ManufacturerDeviceTypeOrm | None]:
+    async def get_manufacturer_device_type(self,
+                                           instance_id: int,
+                                           specification: type[Specification] = ObjectExistsByIdSpecification
+                                           ) -> 'ManufacturerDeviceTypeOrm | None':
         try:
-            stmt = (select(model)
-                    .options(joinedload(model.manufacturer), joinedload(model.device_type))
-                    .filter_by(**await specification.is_satisfied(self, model, instance_id)))
-            instance = await session.execute(stmt)
+            stmt = (select(self._model_orm)
+                    .options(joinedload(self._model_orm.manufacturer), joinedload(self._model_orm.device_type))
+                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+            instance = await self._session.execute(stmt)
             result = instance.scalars().first()
             return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении типа устройства и устройства через relationship'
-                                  f'из таблицы:{model}'
+                                  f'из таблицы:{self._model_orm}'
                                   f'по id:{instance_id}: {e}')
             return None
-
-
