@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from pedant_killer.database.repository.core_repository import CoreRepository
 from pedant_killer.database.database import database_logger
-from pedant_killer.database.specification import Specification, ObjectExistsByIdSpecification
+from pedant_killer.database.specification import Specification, ObjectExistsByRowsSpecification
 from pedant_killer.database.models.device_orm import DeviceOrm
 from pedant_killer.database.models.manufacturer_device_type_orm import ManufacturerDeviceTypeOrm
 from pedant_killer.database.models.device_service_orm import DeviceServiceOrm
@@ -20,51 +20,53 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
 
     async def save_device_service_order(self, order_id: int,
                                         device_service_id: int,
-                                        specification: type['Specification'] = ObjectExistsByIdSpecification
+                                        specification: type['Specification'] = ObjectExistsByRowsSpecification
                                         ) -> 'DeviceServiceOrm | None':
         try:
-            stmt_order = (select(OrderOrm)
-                          .options(joinedload(OrderOrm.device_service))
-                          .filter_by(**await specification.is_satisfied(self, OrderOrm, order_id)))
-            stmt_device_service = (select(self._model_orm)
-                                   .options(joinedload(self._model_orm.order))
-                                   .filter_by(**await specification.is_satisfied(self,
-                                                                                 self._model_orm,
-                                                                                 device_service_id)
-                                              )
-                                   )
-            async with asyncio.TaskGroup() as tg:
-                order_task = tg.create_task(self._session.execute(stmt_order))
-                device_service_task = tg.create_task(self._session.execute(stmt_device_service))
+            async with self._session as session:
+                stmt_order = (select(OrderOrm)
+                              .options(joinedload(OrderOrm.device_service))
+                              .filter_by(**await specification.is_satisfied(self, OrderOrm, order_id)))
+                stmt_device_service = (select(self._model_orm)
+                                       .options(joinedload(self._model_orm.order))
+                                       .filter_by(**await specification.is_satisfied(self,
+                                                                                     self._model_orm,
+                                                                                     device_service_id)
+                                                  )
+                                       )
+                async with asyncio.TaskGroup() as tg:
+                    order_task = tg.create_task(session.execute(stmt_order))
+                    device_service_task = tg.create_task(session.execute(stmt_device_service))
 
-            order = await order_task
-            device_service = await device_service_task
+                order = await order_task
+                device_service = await device_service_task
 
-            order_orm = order.scalars().first()
-            device_service_orm = device_service.scalars().first()
-            self._model_orm.order.append(order_orm)
-            #await self._session.flush()
-            await self._session.commit()
-            await self._session.refresh(order_orm)
-            return device_service_orm
+                order_orm = order.scalars().first()
+                device_service_orm = device_service.scalars().first()
+                self._model_orm.order.append(order_orm)
+                #await self._session.flush()
+                await session.commit()
+                await session.refresh(order_orm)
+                return device_service_orm
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при создании связи между таблицами order и device_service: {e}')
 
             return None
 
-    async def get_order(self, instance_id: int, specification: type['Specification'] = ObjectExistsByIdSpecification
+    async def get_order(self, instance_id: int, specification: type['Specification'] = ObjectExistsByRowsSpecification
                         ) -> 'DeviceServiceOrm | None':
         try:
-            stmt = (select(self._model_orm)
-                    .options(selectinload(self._model_orm.order))
-                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id))
-                    )
+            async with self._session as session:
+                stmt = (select(self._model_orm)
+                        .options(selectinload(self._model_orm.order))
+                        .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id))
+                        )
 
-            instance = await self._session.execute(stmt)
-            result = instance.scalars().first()
+                instance = await session.execute(stmt)
+                result = instance.scalars().first()
 
-            return result
+                return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении заказов через relationship'
@@ -73,22 +75,23 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
 
             return None
 
-    async def get_device(self, instance_id: int, specification: type[Specification] = ObjectExistsByIdSpecification
+    async def get_device(self, instance_id: int, specification: type[Specification] = ObjectExistsByRowsSpecification
                          ) -> 'DeviceServiceOrm | None':
         try:
-            stmt = (select(self._model_orm).options(
-                joinedload(self._model_orm.device)
-                .joinedload(DeviceOrm.manufacturer_device_type)
-                .joinedload(ManufacturerDeviceTypeOrm.manufacturer),
+            async with self._session as session:
+                stmt = (select(self._model_orm).options(
+                    joinedload(self._model_orm.device)
+                    .joinedload(DeviceOrm.manufacturer_device_type)
+                    .joinedload(ManufacturerDeviceTypeOrm.manufacturer),
 
-                joinedload(self._model_orm.device)
-                .joinedload(DeviceOrm.manufacturer_device_type)
-                .joinedload(ManufacturerDeviceTypeOrm.device_type)
-            )
-                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
-            instance = await self._session.execute(stmt)
-            result = instance.scalars().first()
-            return result
+                    joinedload(self._model_orm.device)
+                    .joinedload(DeviceOrm.manufacturer_device_type)
+                    .joinedload(ManufacturerDeviceTypeOrm.device_type)
+                )
+                        .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+                instance = await session.execute(stmt)
+                result = instance.scalars().first()
+                return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении устройства через relationship из таблицы:'
@@ -96,14 +99,15 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
                                   f' {instance_id}: {e}')
             return None
 
-    async def get_service(self, instance_id: int, specification: type[Specification] = ObjectExistsByIdSpecification
+    async def get_service(self, instance_id: int, specification: type[Specification] = ObjectExistsByRowsSpecification
                           ) -> 'DeviceServiceOrm | None':
         try:
-            stmt = (select(self._model_orm).options(joinedload(self._model_orm.service))
-                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
-            instance = await self._session.execute(stmt)
-            result = instance.scalars().first()
-            return result
+            async with self._session as session:
+                stmt = (select(self._model_orm).options(joinedload(self._model_orm.service))
+                        .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+                instance = await session.execute(stmt)
+                result = instance.scalars().first()
+                return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении устройства через relationship из таблицы: {self._model_orm}'
@@ -112,25 +116,26 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
             return None
 
     async def get_device_service(self, instance_id: int,
-                                 specification: type[Specification] = ObjectExistsByIdSpecification
+                                 specification: type[Specification] = ObjectExistsByRowsSpecification
                                  ) -> 'DeviceServiceOrm | None':
         try:
-            stmt = (select(self._model_orm)
-                    .options(
-                        joinedload(self._model_orm.device)
-                        .joinedload(DeviceOrm.manufacturer_device_type)
-                        .joinedload(ManufacturerDeviceTypeOrm.manufacturer),
+            async with self._session as session:
+                stmt = (select(self._model_orm)
+                        .options(
+                            joinedload(self._model_orm.device)
+                            .joinedload(DeviceOrm.manufacturer_device_type)
+                            .joinedload(ManufacturerDeviceTypeOrm.manufacturer),
 
-                        joinedload(self._model_orm.device)
-                        .joinedload(DeviceOrm.manufacturer_device_type)
-                        .joinedload(ManufacturerDeviceTypeOrm.device_type),
+                            joinedload(self._model_orm.device)
+                            .joinedload(DeviceOrm.manufacturer_device_type)
+                            .joinedload(ManufacturerDeviceTypeOrm.device_type),
 
-                        joinedload(self._model_orm.service)
-                    )
-                    .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
-            instance = await self._session.execute(stmt)
-            result = instance.scalars().first()
-            return result
+                            joinedload(self._model_orm.service)
+                        )
+                        .filter_by(**await specification.is_satisfied(self, self._model_orm, instance_id)))
+                instance = await session.execute(stmt)
+                result = instance.scalars().first()
+                return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении устройства и услуги через relationship'

@@ -1,11 +1,12 @@
 import asyncio
 from typing import TYPE_CHECKING
 
-from pedant_killer.database.schemas import (DevicePostDTO,
-                                            DeviceDTO,
-                                            DeviceManufacturerDeviceTypeRelDTO,
-                                            BaseIdDTO
-                                            )
+from pedant_killer.schemas.device_schema import (DevicePostDTO,
+                                                 DeviceDTO,
+                                                 DeviceManufacturerDeviceTypeRelDTO,
+                                                 DevicePartialDTO,
+                                                 BaseIdDTO
+                                                 )
 if TYPE_CHECKING:
     from pedant_killer.database.repository import DeviceRepository
 
@@ -15,7 +16,7 @@ class DeviceService:
         self._repository = repository
 
     async def save_device(self, model_dto: DevicePostDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self._repository.save(**model_dto.dict())
+        result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
@@ -28,7 +29,7 @@ class DeviceService:
     #     manufacturer_device_type_id_dto = await manufacturer_device_type.save_and_create_manufacturer_device_type(
     #         manufacturer_dto,
     #         device_type_dto
-    #     )  # TODO: проверить работоспособность
+    #     )  # TODO: переделать на уровне выше
     #
     #     if manufacturer_device_type_id_dto:
     #         result = await self.save_device(
@@ -42,8 +43,8 @@ class DeviceService:
     #
     #     return None
 
-    async def get_device(self, model_dto: BaseIdDTO) -> list[DeviceDTO] | None:
-        result_orm = await self._repository.get(instance_id=model_dto.id)
+    async def get_device(self, model_dto: DevicePartialDTO | BaseIdDTO) -> list[DeviceDTO] | None:
+        result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [DeviceDTO.model_validate(result_orm, from_attributes=True)]
@@ -71,17 +72,17 @@ class DeviceService:
 
         async with asyncio.TaskGroup() as tg:
             instance_task = tg.create_task(self.get_device(model_dto))
-            delete_task = tg.create_task(self._repository.delete(model_dto.id))
+            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
 
-        instance = await instance_task
-        await delete_task
+        result_orm = await instance_task
+        delete_orm = await delete_task
 
-        if instance:
-            return [DeviceDTO.model_validate(row, from_attributes=True) for row in instance]
+        if result_orm and delete_orm:
+            return [DeviceDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def update_device(self, model_dto: DeviceDTO) -> list[DeviceDTO] | None:
+    async def update_device(self, model_dto: DevicePartialDTO) -> list[DeviceDTO] | None:
         result_orm = await self._repository.update(instance_id=model_dto.id,
                                                    manufacturer_device_type_id=model_dto.manufacturer_device_type_id,
                                                    name_model=model_dto.name_model)

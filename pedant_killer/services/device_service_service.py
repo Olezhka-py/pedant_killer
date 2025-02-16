@@ -1,13 +1,14 @@
 import asyncio
 from typing import TYPE_CHECKING
 
-from pedant_killer.database.schemas import (DeviceServiceOrderRelDTO,
-                                            BaseIdDTO,
-                                            DeviceServicePostDTO,
-                                            DeviceServiceDTO,
-                                            DeviceServiceDeviceRelDTO,
-                                            DeviceServiceServiceRelDTO,
-                                            DeviceServiceRelDTO)
+from pedant_killer.schemas.device_service_schema import (DeviceServiceOrderRelDTO,
+                                                         DeviceServicePartialDTO,
+                                                         DeviceServicePostDTO,
+                                                         DeviceServiceDTO,
+                                                         DeviceServiceDeviceRelDTO,
+                                                         DeviceServiceServiceRelDTO,
+                                                         DeviceServiceRelDTO,
+                                                         BaseIdDTO)
 if TYPE_CHECKING:
     from pedant_killer.database.repository import DeviceServiceRepository
 
@@ -17,7 +18,7 @@ class DeviceServiceService:
         self._repository = repository
 
     async def save_device_service(self, model_dto: DeviceServicePostDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self._repository.save(**model_dto.dict())
+        result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
@@ -25,7 +26,7 @@ class DeviceServiceService:
         return None
 
     async def save_relationship_device_service(self, device_service_id_dto: BaseIdDTO, order_id_dto: BaseIdDTO
-                                               ) -> list[BaseIdDTO] | None:
+                                               ) -> list[DeviceServiceOrderRelDTO] | None:
         result_orm = await self._repository.save_device_service_order(
             order_id=order_id_dto.id,
             device_service_id=device_service_id_dto.id
@@ -44,8 +45,8 @@ class DeviceServiceService:
 
         return None
 
-    async def get_device_service(self, model_dto: BaseIdDTO) -> list[DeviceServiceDTO] | None:
-        result_orm = await self._repository.get(instance_id=model_dto.id)
+    async def get_device_service(self, model_dto: DeviceServicePartialDTO | BaseIdDTO) -> list[DeviceServiceDTO] | None:
+        result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
@@ -90,14 +91,14 @@ class DeviceServiceService:
             delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
 
         result_orm = await instance_task
-        await delete_task
+        delete_orm = await delete_task
 
-        if result_orm:
+        if result_orm and delete_orm:
             return [DeviceServiceDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def update_device_service(self, model_dto: DeviceServiceDTO) -> list[DeviceServiceDTO] | None:
+    async def update_device_service(self, model_dto: DeviceServicePartialDTO) -> list[DeviceServiceDTO] | None:
 
         result_orm = await self._repository.update(
                                                 instance_id=model_dto.id,

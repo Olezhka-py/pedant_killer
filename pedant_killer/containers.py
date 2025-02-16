@@ -9,7 +9,6 @@ class Container(containers.DeclarativeContainer):
 
     wiring_config = containers.WiringConfiguration(
         modules=[
-
         ],
     )
 
@@ -17,12 +16,12 @@ class Container(containers.DeclarativeContainer):
 
     db = providers.Singleton(
         Database,
-        db_url=config.db.database_url_asyncpg
+        db_url=config.database_url_asyncpg
     )
 
     manufacturer_repository = providers.Factory(
         ManufacturerRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     manufacturer_service = providers.Factory(
         ManufacturerService,
@@ -31,7 +30,7 @@ class Container(containers.DeclarativeContainer):
 
     device_type_repository = providers.Factory(
         DeviceTypeRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     device_type_service = providers.Factory(
         DeviceTypeService,
@@ -40,7 +39,7 @@ class Container(containers.DeclarativeContainer):
 
     manufacturer_device_type_repository = providers.Factory(
         ManufacturerDeviceTypeRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     manufacturer_device_type_service = providers.Factory(
         ManufacturerDeviceTypeService,
@@ -49,7 +48,7 @@ class Container(containers.DeclarativeContainer):
 
     device_repository = providers.Factory(
         DeviceRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     device_service = providers.Factory(
         DeviceService,
@@ -58,7 +57,7 @@ class Container(containers.DeclarativeContainer):
 
     service_repository = providers.Factory(
         ServiceRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     service_service = providers.Factory(
         ServiceService,
@@ -67,7 +66,7 @@ class Container(containers.DeclarativeContainer):
 
     device_service_repository = providers.Factory(
         DeviceServiceRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     device_service_service = providers.Factory(
         DeviceServiceService,
@@ -76,7 +75,7 @@ class Container(containers.DeclarativeContainer):
 
     access_level_repository = providers.Factory(
         AccessLevelRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     access_level_service = providers.Factory(
         AccessLevelService,
@@ -85,7 +84,7 @@ class Container(containers.DeclarativeContainer):
 
     user_repository = providers.Factory(
         UserRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     user_service = providers.Factory(
         UserService,
@@ -94,18 +93,18 @@ class Container(containers.DeclarativeContainer):
 
     order_repository = providers.Factory(
         OrderRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     order_service = providers.Factory(
         OrderService,
-        repository=db.provided.session
+        repository=order_repository
     )
 
     order_status_repository = providers.Factory(
         OrderStatusRepository,
-        session=db.provided.session
+        session=db.provided.session.call()
     )
     order_status_service = providers.Factory(
         OrderStatusService,
-        repository=db.provided.session
+        repository=order_status_repository
     )

@@ -1,12 +1,13 @@
 from typing import TYPE_CHECKING
 import asyncio
 
-from pedant_killer.database.schemas import (UserDTO,
-                                            UserPostDTO,
-                                            UserOrdersMasterRelDTO,
-                                            UserOrdersClientRelDTO,
-                                            UserAccessLevelRelDTO,
-                                            BaseIdDTO)
+from pedant_killer.schemas.user_schema import (UserDTO,
+                                               UserPartialDTO,
+                                               UserPostDTO,
+                                               UserOrdersMasterRelDTO,
+                                               UserOrdersClientRelDTO,
+                                               UserAccessLevelRelDTO,
+                                               BaseIdDTO)
 if TYPE_CHECKING:
     from pedant_killer.database.repository import UserRepository
 
@@ -16,15 +17,15 @@ class UserService:
         self._repository = repository
 
     async def save_user(self, model_dto: UserPostDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self._repository.save(**model_dto.dict())
+        result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    async def get_user(self, model_dto: BaseIdDTO) -> list[UserDTO] | None:
-        result_orm = await self._repository.get(instance_id=model_dto.id)
+    async def get_user(self, model_dto: UserPartialDTO | BaseIdDTO) -> list[UserDTO] | None:
+        result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [UserDTO.model_validate(result_orm, from_attributes=True)]
@@ -69,14 +70,14 @@ class UserService:
             delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
 
         result_orm = await instance_task
-        await delete_task
+        delete_orm = await delete_task
 
-        if result_orm:
+        if result_orm and delete_orm:
             return [UserDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def update_user(self, model_dto: UserDTO) -> list[UserDTO] | None:
+    async def update_user(self, model_dto: UserPartialDTO) -> list[UserDTO] | None:
         result_orm = await self._repository.update(instance_id=model_dto.id,
                                                    access_level_id=model_dto.access_level_id,
                                                    telegram_username=model_dto.telegram_username,

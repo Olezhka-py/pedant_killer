@@ -1,7 +1,7 @@
 import asyncio
 from typing import TYPE_CHECKING
 
-from pedant_killer.database.schemas import DeviceTypeDTO, DeviceTypePostDTO, BaseIdDTO
+from pedant_killer.schemas.device_type_schema import DeviceTypeDTO, DeviceTypePostDTO, DeviceTypePartialDTO, BaseIdDTO
 if TYPE_CHECKING:
     from pedant_killer.database.repository import DeviceTypeRepository
 
@@ -11,15 +11,15 @@ class DeviceTypeService:
         self.repository = repository
 
     async def save_device_type(self, model_dto: DeviceTypePostDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self.repository.save(**model_dto.dict())
+        result_orm = await self.repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    async def get_device_type(self, model_dto: BaseIdDTO) -> list[DeviceTypeDTO] | None:
-        result_orm = await self.repository.get(instance_id=model_dto.id)
+    async def get_device_type(self, model_dto: DeviceTypePartialDTO | BaseIdDTO) -> list[DeviceTypeDTO] | None:
+        result_orm = await self.repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [DeviceTypeDTO.model_validate(result_orm, from_attributes=True)]
@@ -40,14 +40,14 @@ class DeviceTypeService:
             delete_task = tg.create_task(self.repository.delete(instance_id=model_dto.id))
 
         result_orm = await instance_task
-        await delete_task
+        delete_orm = await delete_task
 
-        if result_orm:
+        if result_orm and delete_orm:
             return [DeviceTypeDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
-    async def update_device_type(self, model_dto: DeviceTypeDTO) -> [DeviceTypeDTO | None]:
+    async def update_device_type(self, model_dto: DeviceTypePartialDTO) -> [DeviceTypeDTO | None]:
         result_orm = await self.repository.update(
                                                   instance_id=model_dto.id,
                                                   name=model_dto.name,

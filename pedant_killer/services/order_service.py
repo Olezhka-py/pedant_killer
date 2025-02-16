@@ -1,13 +1,14 @@
 import asyncio
 from typing import TYPE_CHECKING
 
-from pedant_killer.database.schemas import (BaseIdDTO,
-                                            OrderDTO,
-                                            OrderDeviceServiceRelDTO,
-                                            OrderClientRelDTO,
-                                            OrderMasterRelDTO,
-                                            OrderOrderStatusRelDTO,
-                                            OrderPostDTO)
+from pedant_killer.schemas.order_schema import (BaseIdDTO,
+                                                OrderDTO,
+                                                OrderDeviceServiceRelDTO,
+                                                OrderClientRelDTO,
+                                                OrderMasterRelDTO,
+                                                OrderOrderStatusRelDTO,
+                                                OrderPostDTO,
+                                                OrderPartialDTO)
 if TYPE_CHECKING:
     from pedant_killer.database.repository import OrderRepository
 
@@ -17,7 +18,7 @@ class OrderService:
         self._repository = repository
 
     async def save_order(self, model_dto: OrderPostDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self._repository.save(**model_dto.dict())
+        result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
@@ -38,8 +39,8 @@ class OrderService:
     #
     #     return None
 
-    async def get_order(self, model_dto: BaseIdDTO) -> list[OrderDTO] | None:
-        result_orm = await self._repository.get(instance_id=model_dto.id)
+    async def get_order(self, model_dto: OrderPartialDTO | BaseIdDTO) -> list[OrderDTO] | None:
+        result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [OrderDTO.model_validate(result_orm, from_attributes=True)]
@@ -85,19 +86,22 @@ class OrderService:
         return None
 
     async def delete_order(self, model_dto: BaseIdDTO) -> list[OrderDTO] | None:
-        async with asyncio.TaskGroup() as tg:
-            instance_task = tg.create_task(self.get_order(model_dto=model_dto))
-            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
+        # async with asyncio.TaskGroup() as tg:
+        #     instance_task = tg.create_task(self.get_order(model_dto=model_dto))
+        #     delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
 
-        result_orm = await instance_task
-        await delete_task
+        # result_orm = await instance_task
+        # delete_orm = await delete_task
 
-        if result_orm:
-            return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        delete_orm = await self._repository.delete(instance_id=model_dto.id)
+        return delete_orm
 
-        return None
+        # if result_orm and delete_orm:
+        #     return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        #
+        # return None
 
-    async def update_order(self, model_dto: OrderDTO) -> list[OrderDTO] | None:
+    async def update_order(self, model_dto: OrderPartialDTO) -> list[OrderDTO] | None:
         result_orm = await self._repository.update(instance_id=model_dto.id,
                                                    client_id=model_dto.client_id,
                                                    master_id=model_dto.master_id,

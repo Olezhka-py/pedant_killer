@@ -1,7 +1,8 @@
 import asyncio
 from typing import TYPE_CHECKING
 
-from pedant_killer.database.schemas import AccessLevelPostDTO, BaseIdDTO, AccessLevelDTO
+from pedant_killer.schemas.access_level_schema import (AccessLevelPostDTO,
+                                                       AccessLevelDTO, AccessLevelPartialDTO, BaseIdDTO)
 if TYPE_CHECKING:
     from pedant_killer.database.repository.access_level_repository import AccessLevelRepository
 
@@ -11,18 +12,18 @@ class AccessLevelService:
         self._repository = repository
 
     async def save_access_level(self, model_dto: AccessLevelPostDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self._repository.save(**model_dto.dict())
+        result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    async def get_access_level(self, model_dto: BaseIdDTO) -> list[AccessLevelDTO] | None:
-        result_orm = await self._repository.get(instance_id=model_dto.id)
+    async def get_access_level(self, model_dto: AccessLevelPartialDTO | BaseIdDTO) -> list[AccessLevelDTO] | None:
+        result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [AccessLevelDTO.model_validate(result_orm, from_attributes=True)]
+            return [AccessLevelDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
         return None
 
@@ -35,15 +36,11 @@ class AccessLevelService:
         return None
 
     async def delete_access_level(self, model_dto: BaseIdDTO) -> list[AccessLevelDTO] | None:
+        # result_orm = await self.get_access_level(model_dto)
+        # if result_orm:
+        delete_result = await self._repository.delete(instance_id=model_dto.id)
+        return delete_result
+        # return delete_result
+        #     if delete_result:
+        #         return [AccessLevelDTO.model_validate(row, from_attributes=True) for row in result_orm]
 
-        async with asyncio.TaskGroup() as tg:
-            instance_task = tg.create_task(self.get_access_level(model_dto))
-            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
-
-        result_orm = await instance_task
-        await delete_task
-
-        if result_orm:
-            return [AccessLevelDTO.model_validate(row, from_attributes=True) for row in result_orm]
-
-        return None

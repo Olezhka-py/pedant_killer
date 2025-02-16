@@ -6,4 +6,4 @@ from pedant_killer.database.repository.core_repository import CoreRepository
 
 class AccessLevelRepository(CoreRepository[AccessLevelOrm]):
     def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session, model_orm=AccessLevelOrm)
+        super().__init__(session=session, model_orm=AccessLevelOrm)
