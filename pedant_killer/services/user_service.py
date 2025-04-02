@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-import asyncio
 
 from pedant_killer.schemas.user_schema import (UserDTO,
                                                UserPartialDTO,
@@ -28,7 +27,7 @@ class UserService:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [UserDTO.model_validate(result_orm, from_attributes=True)]
+            return [UserDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
@@ -57,7 +56,7 @@ class UserService:
         return None
 
     async def get_all_user(self) -> list[UserDTO] | None:
-        result_orm = await self._repository.get_all()
+        result_orm = await self._repository.get()
 
         if result_orm:
             return [UserDTO.model_validate(row, from_attributes=True) for row in result_orm]
@@ -65,26 +64,18 @@ class UserService:
         return None
 
     async def delete_user(self, model_dto: BaseIdDTO) -> list[UserDTO] | None:
-        async with asyncio.TaskGroup() as tg:
-            instance_task = tg.create_task(self.get_user(model_dto))
-            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
+        result_dto = await self.get_user(model_dto)
 
-        result_orm = await instance_task
-        delete_orm = await delete_task
+        if result_dto:
+            delete_result = await self._repository.delete(id=model_dto.id)
 
-        if result_orm and delete_orm:
-            return [UserDTO.model_validate(row, from_attributes=True) for row in result_orm]
+            if delete_result:
+                return result_dto
 
         return None
 
     async def update_user(self, model_dto: UserPartialDTO) -> list[UserDTO] | None:
-        result_orm = await self._repository.update(instance_id=model_dto.id,
-                                                   access_level_id=model_dto.access_level_id,
-                                                   telegram_username=model_dto.telegram_username,
-                                                   telegram_id=model_dto.telegram_id,
-                                                   full_name=model_dto.full_name,
-                                                   address=model_dto.address,
-                                                   phone=model_dto.phone)
+        result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [UserDTO.model_validate(result_orm, from_attributes=True)]

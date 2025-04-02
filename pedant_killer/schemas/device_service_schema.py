@@ -1,12 +1,9 @@
-from typing import TYPE_CHECKING
-
 from pydantic import Field
 
 from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
 from pedant_killer.schemas.service_schema import ServiceDTO
 from pedant_killer.schemas.device_schema import DeviceManufacturerDeviceTypeRelDTO
-if TYPE_CHECKING:
-    from pedant_killer.schemas.order_schema import OrderDTO
+from pedant_killer.schemas.order_schema import OrderDTO
 
 
 class DeviceServicePostDTO(CoreModel):

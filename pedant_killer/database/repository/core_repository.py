@@ -1,7 +1,7 @@
 from typing import Any, Sequence
 
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from sqlalchemy import select, delete
 from pedant_killer.database.database import database_logger, Base
@@ -10,13 +10,13 @@ from pedant_killer.database.specification import (Specification,
 
 
 class CoreRepository[T: Base]:
-    def __init__(self, session: AsyncSession, model_orm: type[T]) -> None:
-        self._session = session
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession], model_orm: type[T]) -> None:
+        self._session_factory = session_factory
         self._model_orm = model_orm
 
     async def save(self, **kwargs: Any) -> int | None:
         try:
-            async with self._session as session:
+            async with self._session_factory() as session:
                 instance = self._model_orm(**kwargs)
                 session.add(instance)
                 await session.commit()
@@ -28,22 +28,11 @@ class CoreRepository[T: Base]:
             database_logger.error(f'Ошибка при добавлении записи в таблицу {self._model_orm}: {e}')
             return None
 
-    async def get_without_checks(self, instance_id: int) -> T | None:
-        try:
-            async with self._session as session:
-                stmt = select(self._model_orm).filter_by(id=instance_id)
-                instance = await session.execute(stmt)
-                return instance.scalars().first()
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении записи из таблицы {self._model_orm} по {instance_id}: {e}')
-            return None
-
     async def get(self, specification_filter: type[Specification] = ObjectExistsByRowsSpecification,
                   specification_sort: type[Specification] = OrderByRowsDefaultSpecification,
                   **rows: dict[str, Any]) -> Sequence[T] | None:
         try:
-            async with self._session as session:
+            async with self._session_factory() as session:
                 stmt = (select(self._model_orm)
                         .where(await specification_filter.is_satisfied(self._model_orm, rows))
                         .order_by(await specification_sort.is_satisfied(self._model_orm, rows)))
@@ -56,47 +45,24 @@ class CoreRepository[T: Base]:
             database_logger.error(f'Ошибка при получении данных из таблицы {self._model_orm} по {rows=}: {e}')
             return None
 
-    async def get_all(self) -> Sequence[T] | None:
+    async def delete(self, specification: type[Specification] = ObjectExistsByRowsSpecification, **row) -> bool | None:
         try:
-            async with self._session as session:
-                stmt = select(self._model_orm)
-                result = await session.execute(stmt)
-                item = result.scalars().all()
-                database_logger.info(f'Данные из таблицы {self._model_orm} получены')
-                return item
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении данных из таблицы {self._model_orm}: {e}')
-            return None
-
-    async def delete(self, instance_id: int = None) -> bool | None:
-        try:
-            async with self._session as session:
-                stmt = delete(self._model_orm).filter_by(id=instance_id)
+            async with self._session_factory() as session:
+                stmt = delete(self._model_orm).where(await specification.is_satisfied(self._model_orm, row))
                 await session.execute(stmt)
                 await session.commit()
-                database_logger.info(f'Удалена запись с id: {instance_id=} из таблицы {self._model_orm}')
+                database_logger.info(f'Удалена запись с id: {row=} из таблицы {self._model_orm}')
                 return True
         except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при удалении записи из таблицы: {self._model_orm} по id: {instance_id=}: {e}')
+            database_logger.error(f'Ошибка при удалении записи из таблицы: {self._model_orm} по id: {row=}: {e}')
             await session.rollback()
             return None
 
-    async def delete_all(self) -> type[T] | None:
+    async def update(self, **rows: dict[str, Any]) -> T | None:
         try:
-            async with self._session as session:
-                stmt = delete(self._model_orm)
-                await session.execute(stmt)
-                await session.commit()
-                database_logger.info(f'Удалены все записи из таблицы: {self._model_orm}')
-                return self._model_orm
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при удалении всех записей из таблицы: {self._model_orm}: {e}')
-            await session.rollback()
-            return None
-
-    async def update(self, instance_id: int, **rows: Any) -> T | None:
-        try:
-            async with self._session as session:
+            async with self._session_factory() as session:
+                instance_id = rows.get('id', None)
+                rows.pop('id')
                 stmt = select(self._model_orm).filter_by(id=instance_id)
                 result = await session.execute(stmt)
                 obj = result.scalars().one()

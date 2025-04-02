@@ -15,10 +15,10 @@ class UserOrm(Base):
     id: Mapped[intpk]
     access_level_id: Mapped[int] = mapped_column(ForeignKey('access_level.id'))
     telegram_username: Mapped[str]
-    telegram_id: Mapped[str]
+    telegram_id: Mapped[int]
     full_name: Mapped[str]
-    address: Mapped[str]
-    phone: Mapped[str]
+    address: Mapped[str | None] = mapped_column(default=None, nullable=True)
+    phone: Mapped[str | None] = mapped_column(default=None, nullable=True)
 
     orders_client: Mapped[list['OrderOrm'] | None] = relationship(
         back_populates='user_client',

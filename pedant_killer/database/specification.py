@@ -1,12 +1,8 @@
 from sqlalchemy import BinaryExpression
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import and_, true
 from abc import ABC, abstractmethod
-from pedant_killer.database.database import Base
 from sqlalchemy.sql import expression
-from typing import Any, Coroutine, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from pedant_killer.database.repository.core_repository import CoreRepository
+from typing import Any, TYPE_CHECKING
 
 
 class Specification(ABC):
@@ -36,10 +32,10 @@ class ObjectExistsByRowsSpecification(Specification):
 
             return and_(*conditions)
 
-        return None
+        return and_()
 
 
 class OrderByRowsDefaultSpecification(Specification):
     @classmethod
     async def is_satisfied(cls, model, rows: dict[str, Any]) -> None:
-        return None
+        return and_()

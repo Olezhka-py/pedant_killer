@@ -1,4 +1,3 @@
-import asyncio
 from typing import TYPE_CHECKING
 
 from pedant_killer.schemas.device_service_schema import (DeviceServiceOrderRelDTO,
@@ -25,20 +24,20 @@ class DeviceServiceService:
 
         return None
 
-    async def save_relationship_device_service(self, device_service_id_dto: BaseIdDTO, order_id_dto: BaseIdDTO
-                                               ) -> list[DeviceServiceOrderRelDTO] | None:
+    async def save_relationship_device_service_order(self, device_service_id_dto: BaseIdDTO, order_id_dto: BaseIdDTO
+                                               ) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save_device_service_order(
             order_id=order_id_dto.id,
             device_service_id=device_service_id_dto.id
             )
 
-        if result_orm:  # TODO: Сделать проверку метода
-            return [DeviceServiceOrderRelDTO.model_validate(result_orm, from_attributes=True)]
+        if result_orm:
+            return [BaseIdDTO(id=result_orm)]
 
         return None
 
-    async def get_relationship_order(self, device_service_id_dto: BaseIdDTO) -> list[DeviceServiceOrderRelDTO] | None:
-        result_orm = await self._repository.get_order(instance_id=device_service_id_dto.id)
+    async def get_relationship_order(self, model_dto: BaseIdDTO) -> list[DeviceServiceOrderRelDTO] | None:
+        result_orm = await self._repository.get_order(instance_id=model_dto.id)
 
         if result_orm:
             return [DeviceServiceOrderRelDTO.model_validate(result_orm, from_attributes=True)]
@@ -49,7 +48,7 @@ class DeviceServiceService:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
+            return [DeviceServiceDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
@@ -57,7 +56,7 @@ class DeviceServiceService:
         result_orm = await self._repository.get_device(instance_id=model_dto.id)
 
         if result_orm:
-            return [DeviceServiceDeviceRelDTO.model_validate(result_orm, from_attributes=True)]
+            return [DeviceServiceDeviceRelDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
@@ -78,7 +77,7 @@ class DeviceServiceService:
         return None
 
     async def get_all_device_service(self) -> list[DeviceServiceDTO] | None:
-        result_orm = await self._repository.get_all()
+        result_orm = await self._repository.get()
 
         if result_orm:
             return [DeviceServiceDTO.model_validate(row, from_attributes=True) for row in result_orm]
@@ -86,26 +85,18 @@ class DeviceServiceService:
         return None
 
     async def delete_device_service(self, model_dto: BaseIdDTO) -> list[DeviceServiceDTO] | None:
-        async with asyncio.TaskGroup() as tg:
-            instance_task = tg.create_task(self.get_device_service(model_dto))
-            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
+        result_dto = await self.get_device_service(model_dto)
 
-        result_orm = await instance_task
-        delete_orm = await delete_task
+        if result_dto:
+            delete_result = await self._repository.delete(id=model_dto.id)
 
-        if result_orm and delete_orm:
-            return [DeviceServiceDTO.model_validate(row, from_attributes=True) for row in result_orm]
+            if delete_result:
+                return result_dto
 
         return None
 
     async def update_device_service(self, model_dto: DeviceServicePartialDTO) -> list[DeviceServiceDTO] | None:
-
-        result_orm = await self._repository.update(
-                                                instance_id=model_dto.id,
-                                                service_id=model_dto.service_id,
-                                                device_id=model_dto.device_id,
-                                                work_duration=model_dto.work_duration
-                                                )
+        result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]

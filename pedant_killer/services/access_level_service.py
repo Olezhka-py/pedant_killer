@@ -1,4 +1,3 @@
-import asyncio
 from typing import TYPE_CHECKING
 
 from pedant_killer.schemas.access_level_schema import (AccessLevelPostDTO,
@@ -28,7 +27,7 @@ class AccessLevelService:
         return None
 
     async def get_all_access_level(self) -> list[AccessLevelDTO] | None:
-        result_orm = await self._repository.get_all()
+        result_orm = await self._repository.get()
 
         if result_orm:
             return [AccessLevelDTO.model_validate(row, from_attributes=True) for row in result_orm]
@@ -36,11 +35,20 @@ class AccessLevelService:
         return None
 
     async def delete_access_level(self, model_dto: BaseIdDTO) -> list[AccessLevelDTO] | None:
-        # result_orm = await self.get_access_level(model_dto)
-        # if result_orm:
-        delete_result = await self._repository.delete(instance_id=model_dto.id)
-        return delete_result
-        # return delete_result
-        #     if delete_result:
-        #         return [AccessLevelDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        result_dto = await self.get_access_level(model_dto)
 
+        if result_dto:
+            delete_result = await self._repository.delete(id=model_dto.id)
+
+            if delete_result:
+                return result_dto
+
+        return None
+
+    async def update_access_level(self, model_dto: AccessLevelPartialDTO) -> list[AccessLevelDTO] | None:
+        result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
+
+        if result_orm:
+            return [AccessLevelDTO.model_validate(result_orm, from_attributes=True)]
+
+        return None

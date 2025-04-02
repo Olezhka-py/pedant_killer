@@ -1,4 +1,3 @@
-import asyncio
 from typing import TYPE_CHECKING
 
 from pedant_killer.schemas.order_status_schema import (OrderStatusPostDTO,
@@ -25,12 +24,12 @@ class OrderStatusService:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [OrderStatusDTO.model_validate(result_orm, from_attributes=True)]
+            return [OrderStatusDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
     async def get_all_order_status(self) -> list[OrderStatusDTO] | None:
-        result_orm = await self._repository.get_all()
+        result_orm = await self._repository.get()
 
         if result_orm:
             return [OrderStatusDTO.model_validate(row, from_attributes=True) for row in result_orm]
@@ -38,15 +37,20 @@ class OrderStatusService:
         return None
 
     async def delete_order_status(self, model_dto: BaseIdDTO) -> list[OrderStatusDTO] | None:
+        result_dto = await self.get_order_status(model_dto)
 
-        async with asyncio.TaskGroup() as tg:
-            instance_task = tg.create_task(self.get_order_status(model_dto))
-            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
+        if result_dto:
+            delete_result = await self._repository.delete(id=model_dto.id)
 
-        result_orm = await instance_task
-        delete_orm = delete_task
+            if delete_result:
+                return result_dto
 
-        if result_orm and delete_orm:
-            return [OrderStatusDTO.model_validate(row, from_attributes=True) for row in result_orm]
+        return None
+
+    async def update_access_level(self, model_dto: OrderStatusPartialDTO) -> list[OrderStatusDTO] | None:
+        result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
+
+        if result_orm:
+            return [OrderStatusDTO.model_validate(result_orm, from_attributes=True)]
 
         return None

@@ -5,9 +5,9 @@ from pydantic import Field
 
 from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
 if TYPE_CHECKING:
+    from pedant_killer.schemas.device_service_schema import DeviceServiceDTO
     from pedant_killer.schemas.user_schema import UserDTO
     from pedant_killer.schemas.order_status_schema import OrderStatusDTO
-    from pedant_killer.schemas.device_service_schema import DeviceServiceDTO
 
 
 class OrderPostDTO(CoreModel):

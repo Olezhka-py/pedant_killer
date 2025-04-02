@@ -12,13 +12,16 @@ if TYPE_CHECKING:
 class UserPostDTO(CoreModel):
     access_level_id: int = Field(ge=1)
     telegram_username: str
-    telegram_id: str
+    telegram_id: int
     full_name: str
     address: str | None = None
-    phone: str
+    phone: str | None = None
 
     @field_validator('phone')
     def is_valid_phone_number(cls, phone: Any) -> str | None:
+        if phone is None:
+            return None
+
         parsed_number = parse(phone, None)
 
         if is_valid_number(parsed_number):

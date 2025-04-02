@@ -18,6 +18,7 @@ class DeviceServiceOrm(Base):
     service_id: Mapped[int] = mapped_column(ForeignKey('service.id'))
     price: Mapped[int]
     work_duration: Mapped[int | None] = mapped_column(default=None)
+    warranty: Mapped[int | None] = mapped_column(default=0)
 
     device: Mapped['DeviceOrm'] = relationship()
     service: Mapped['ServiceOrm'] = relationship()

@@ -1,5 +1,3 @@
-from pydantic import Field
-
 from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
 
 

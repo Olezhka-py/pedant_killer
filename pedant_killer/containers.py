@@ -3,6 +3,7 @@ from dependency_injector import containers, providers
 from pedant_killer.database.database import Database
 from pedant_killer.database.repository import *
 from pedant_killer.services import *
+from pedant_killer import config
 
 
 class Container(containers.DeclarativeContainer):
@@ -21,7 +22,7 @@ class Container(containers.DeclarativeContainer):
 
     manufacturer_repository = providers.Factory(
         ManufacturerRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     manufacturer_service = providers.Factory(
         ManufacturerService,
@@ -30,7 +31,7 @@ class Container(containers.DeclarativeContainer):
 
     device_type_repository = providers.Factory(
         DeviceTypeRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     device_type_service = providers.Factory(
         DeviceTypeService,
@@ -39,7 +40,7 @@ class Container(containers.DeclarativeContainer):
 
     manufacturer_device_type_repository = providers.Factory(
         ManufacturerDeviceTypeRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     manufacturer_device_type_service = providers.Factory(
         ManufacturerDeviceTypeService,
@@ -48,7 +49,7 @@ class Container(containers.DeclarativeContainer):
 
     device_repository = providers.Factory(
         DeviceRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     device_service = providers.Factory(
         DeviceService,
@@ -57,7 +58,7 @@ class Container(containers.DeclarativeContainer):
 
     service_repository = providers.Factory(
         ServiceRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     service_service = providers.Factory(
         ServiceService,
@@ -66,7 +67,7 @@ class Container(containers.DeclarativeContainer):
 
     device_service_repository = providers.Factory(
         DeviceServiceRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     device_service_service = providers.Factory(
         DeviceServiceService,
@@ -75,7 +76,7 @@ class Container(containers.DeclarativeContainer):
 
     access_level_repository = providers.Factory(
         AccessLevelRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     access_level_service = providers.Factory(
         AccessLevelService,
@@ -84,7 +85,7 @@ class Container(containers.DeclarativeContainer):
 
     user_repository = providers.Factory(
         UserRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     user_service = providers.Factory(
         UserService,
@@ -93,7 +94,7 @@ class Container(containers.DeclarativeContainer):
 
     order_repository = providers.Factory(
         OrderRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     order_service = providers.Factory(
         OrderService,
@@ -102,9 +103,13 @@ class Container(containers.DeclarativeContainer):
 
     order_status_repository = providers.Factory(
         OrderStatusRepository,
-        session=db.provided.session.call()
+        session_factory=db.provided.session
     )
     order_status_service = providers.Factory(
         OrderStatusService,
         repository=order_status_repository
     )
+
+
+container = Container()
+container.config.from_pydantic(config.Config())

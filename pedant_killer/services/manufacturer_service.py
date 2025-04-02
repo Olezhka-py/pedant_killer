@@ -1,4 +1,3 @@
-import asyncio
 from typing import TYPE_CHECKING
 
 from pedant_killer.schemas.manufacturer_schema import (ManufacturerPostDTO,
@@ -25,40 +24,33 @@ class ManufacturerService:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [ManufacturerDTO.model_validate(result_orm, from_attributes=True)]
+            return [ManufacturerDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
     async def get_all_manufacturer(self) -> list[ManufacturerDTO] | None:
-        result_orm = await self._repository.get_all()
+        result_orm = await self._repository.get()
 
         if result_orm:
-            return [ManufacturerDTO.model_validate(row, from_attributes=True) for row in result_orm]
+            return [ManufacturerDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
     async def delete_manufacturer(self, model_dto: BaseIdDTO) -> list[ManufacturerDTO] | None:
-        async with asyncio.TaskGroup() as tg:
-            instance_task = tg.create_task(self.get_manufacturer(model_dto))
-            delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
+        result_dto = await self.get_manufacturer(model_dto)
 
-        result_orm = await instance_task
-        delete_orm = await delete_task
+        if result_dto:
+            delete_result = await self._repository.delete(id=model_dto.id)
 
-        if result_orm and delete_orm:
-            return [ManufacturerDTO.model_validate(row, from_attributes=True) for row in result_orm]
+            if delete_result:
+                return result_dto
 
         return None
 
     async def update_manufacturer(self, model_dto: ManufacturerPartialDTO) -> list[ManufacturerDTO] | None:
-        result_orm = await self._repository.update(
-                                                  instance_id=model_dto.id,
-                                                  name=model_dto.name,
-                                                  description=model_dto.description
-                                                  )
+        result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [ManufacturerDTO.model_validate(result_orm, from_attributes=True)]
 
         return None
-

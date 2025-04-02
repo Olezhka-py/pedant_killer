@@ -1,5 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 
 def get_users_city() -> ReplyKeyboardMarkup:
@@ -79,3 +79,19 @@ def same() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         one_time_keyboard=True
     )
+
+
+def agreement() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    kb.add(InlineKeyboardButton(
+        text='Ознакомиться с политикой 📋',
+        url='https://pedant.ru/pravila-lno/'
+    ))
+
+    kb.add(InlineKeyboardButton(
+        text='Я соглашаюсь ✍️',
+        callback_data='agree'
+    ))
+
+    return kb.as_markup()

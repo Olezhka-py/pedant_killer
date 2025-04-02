@@ -1,4 +1,3 @@
-import asyncio
 from typing import TYPE_CHECKING
 
 from pedant_killer.schemas.order_schema import (BaseIdDTO,
@@ -23,27 +22,23 @@ class OrderService:
         if result_orm:
             return [BaseIdDTO(id=result_orm)]
 
-    # async def save_relationship_order_device_service(self, order_id: int,
-    #                                                  device_service_id: int) -> [DeviceServiceDTO | None]:
-    #     if self.checking_correctness_identifier(order_id, device_service_id):
-    #
-    #         repository = OrderRepository()
-    #         result_orm = await repository.save_order_device_service(OrderOrm,
-    #                                                                 DeviceServiceOrm,
-    #                                                                 order_id=order_id,
-    #                                                                 device_service_id=device_service_id
-    #                                                                 )
-    #
-    #         if result_orm:
-    #             return [DeviceServiceDTO.model_validate(result_orm, from_attributes=True)]
-    #
-    #     return None
+    async def save_relationship_order_device_service(self, order_id: BaseIdDTO,
+                                                     device_service_id: BaseIdDTO
+                                                     ) -> list[BaseIdDTO] | None:
+
+        result_orm = await self._repository.save_order_device_service(order_id=order_id.id,
+                                                                      device_service_id=device_service_id.id)
+
+        if result_orm:
+            return [BaseIdDTO(id=result_orm)]
+
+        return None
 
     async def get_order(self, model_dto: OrderPartialDTO | BaseIdDTO) -> list[OrderDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [OrderDTO.model_validate(result_orm, from_attributes=True)]
+            return [OrderDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
@@ -78,7 +73,7 @@ class OrderService:
             return [OrderOrderStatusRelDTO.model_validate(result_orm, from_attributes=True)]
 
     async def get_all_orders(self) -> list[OrderDTO] | None:
-        result_orm = await self._repository.get_all()
+        result_orm = await self._repository.get()
 
         if result_orm:
             return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
@@ -86,33 +81,20 @@ class OrderService:
         return None
 
     async def delete_order(self, model_dto: BaseIdDTO) -> list[OrderDTO] | None:
-        # async with asyncio.TaskGroup() as tg:
-        #     instance_task = tg.create_task(self.get_order(model_dto=model_dto))
-        #     delete_task = tg.create_task(self._repository.delete(instance_id=model_dto.id))
+        result_dto = await self.get_order(model_dto)
 
-        # result_orm = await instance_task
-        # delete_orm = await delete_task
+        if result_dto:
+            delete_result = await self._repository.delete(id=model_dto.id)
 
-        delete_orm = await self._repository.delete(instance_id=model_dto.id)
-        return delete_orm
+            if delete_result:
+                return result_dto
 
-        # if result_orm and delete_orm:
-        #     return [OrderDTO.model_validate(row, from_attributes=True) for row in result_orm]
-        #
-        # return None
+        return None
 
     async def update_order(self, model_dto: OrderPartialDTO) -> list[OrderDTO] | None:
-        result_orm = await self._repository.update(instance_id=model_dto.id,
-                                                   client_id=model_dto.client_id,
-                                                   master_id=model_dto.master_id,
-                                                   status_id=model_dto.status_id,
-                                                   sent_from_address=model_dto.sent_from_address,
-                                                   return_to_address=model_dto.return_to_address,
-                                                   comment=model_dto.comment,
-                                                   rating=model_dto.rating)
+        result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [OrderDTO.model_validate(result_orm, from_attributes=True)]
 
         return None
-

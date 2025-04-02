@@ -1,46 +1,17 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 import logging
-from typing import AsyncIterator
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
-from pedant_killer.config import config
-
-database_logger = logging.getLogger('database')
-logging.basicConfig(
-    filename='pedant_killer.log',
-    format='%(asctime)s - %(name)s - %(filename)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-database_logger.propagate = True
-
-# async_engine = create_async_engine(
-#     url=config.database_url_asyncpg,
-#     echo=False
+database_logger = logging.getLogger()
+# logging.basicConfig(
+#     filename='pedant_killer.log',
+#     format='%(asctime)s - %(name)s - %(filename)s - %(levelname)s - %(message)s',
+#     level=logging.INFO
 # )
-
-# async_session_factory = async_sessionmaker(async_engine)
-
-
-# def connection(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
-#     async def wrapper(*args, **kwargs):
-#         if len(args) > 0 and hasattr(args[0], "__class__"):
-#             self_or_cls = args[0]
-#         else:
-#             self_or_cls = None
-#
-#         async with async_session_factory() as session:
-#             if self_or_cls:
-#                 return await func(self_or_cls, session, *args[1:], **kwargs)
-#             else:
-#                 return await func(session, *args, **kwargs)
-#
-#     # Копируем имя, документацию и аннотации
-#     wrapper.__name__ = func.__name__
-#     wrapper.__doc__ = func.__doc__
-#
-#     return wrapper
+# database_logger.propagate = True
 
 
 class Base(DeclarativeBase):
@@ -55,7 +26,7 @@ class Database:
         self._session_factory = async_sessionmaker(self._engine)
 
     @asynccontextmanager
-    async def session(self) -> AsyncIterator:
+    async def session(self) -> AsyncGenerator[AsyncSession, None]:
         async with self._session_factory() as session:
             try:
                 yield session
