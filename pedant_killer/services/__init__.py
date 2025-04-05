@@ -8,4 +8,4 @@ from pedant_killer.services.order_service import OrderService
 from pedant_killer.services.order_status_service import OrderStatusService
 from pedant_killer.services.service_service import ServiceService
 from pedant_killer.services.user_service import UserService
-
+from pedant_killer.services.breaking_service import BreakingService

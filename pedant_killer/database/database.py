@@ -5,13 +5,7 @@ import logging
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
-database_logger = logging.getLogger()
-# logging.basicConfig(
-#     filename='pedant_killer.log',
-#     format='%(asctime)s - %(name)s - %(filename)s - %(levelname)s - %(message)s',
-#     level=logging.INFO
-# )
-# database_logger.propagate = True
+database_logger = logging.getLogger("database_logger")
 
 
 class Base(DeclarativeBase):

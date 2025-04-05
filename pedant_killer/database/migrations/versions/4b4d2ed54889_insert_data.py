@@ -1,8 +1,8 @@
 """insert_data
 
-Revision ID: 84ef360aad48
-Revises: 21d14d34ab83
-Create Date: 2025-04-01 16:49:28.591173
+Revision ID: 4b4d2ed54889
+Revises: 62100b163c82
+Create Date: 2025-04-05 15:24:31.265699
 
 """
 from typing import Sequence, Union
@@ -10,10 +10,14 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 import pandas as pd
+import logging
+
+alembic_logger = logging.getLogger("alembic_logger")
+
 
 # revision identifiers, used by Alembic.
-revision: str = '84ef360aad48'
-down_revision: Union[str, None] = '21d14d34ab83'
+revision: str = '4b4d2ed54889'
+down_revision: Union[str, None] = '62100b163c82'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -31,6 +35,8 @@ def upgrade() -> None:
     df_device = df_device.drop_duplicates()
     df_service = df['Услуга'].drop_duplicates()
     df_device_service = df[['Устройство', 'Услуга', 'Цена', 'Гарантия']]
+    df_breaking = pd.read_csv('pedant_killer/data/breaking.csv')
+    df_breaking = df_breaking['Поломка']
 
     for row in df_manufacturer.tolist():
 
@@ -140,10 +146,20 @@ def upgrade() -> None:
         ('Готов', 'Заказ готов к выдаче'),
         ('Закрыт', 'Заказ выполнен'),
         ('Выдан клиенту без ремонта', 'Заказ выполнен'),
-        ('На согласовании', 'Заказ в процессе согласования работ')
+        ('На согласовании', 'Заказ в процессе согласования работ'),
         ('Доставка', 'Производится доставка заказа')
         """)
     )
+    alembic_logger.info('Статичные данные добавлены в таблицы')
+
+    for row in df_breaking.tolist():
+        conn.execute(
+            sa.text("""
+            INSERT INTO breaking(name) VALUES
+            (:breaking)
+            """),
+            {'breaking': row}
+        )
 
     # ### end Alembic commands ###
 
@@ -155,5 +171,6 @@ def downgrade() -> None:
         TRUNCATE TABLE manufacturer, device_type, manufacturer_device_type, device, access_level, order_status CASCADE
         """)
     )
+    alembic_logger.info('Статичные данные удалены из таблиц')
 
     # ### end Alembic commands ###

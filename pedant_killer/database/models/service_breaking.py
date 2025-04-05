@@ -5,15 +5,15 @@ from pedant_killer.database.database import Base
 from pedant_killer.database.models.annotated import intpk
 
 
-class OrderDeviceServiceOrm(Base):
-    __tablename__ = 'order_device_service'
+class ServiceBreakingOrm(Base):
+    __tablename__ = 'service_breaking'
     __table_args__ = (
         UniqueConstraint(
-            'order_id',
-            'device_service_id',
-            name='indx_uniq'
+            'service_id',
+            'breaking_id',
+            name='indx_uniq_service_breaking'
         ),
     )
     id: Mapped[intpk] = mapped_column(primary_key=True)
-    order_id: Mapped[int] = mapped_column(ForeignKey('order.id'))
-    device_service_id: Mapped[int] = mapped_column(ForeignKey('device_service.id'))
+    service_id: Mapped[int] = mapped_column(ForeignKey('service.id'))
+    breaking_id: Mapped[int] = mapped_column(ForeignKey('breaking.id'))

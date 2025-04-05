@@ -1,19 +1,18 @@
-"""first_migration
+"""create_base
 
-Revision ID: 21d14d34ab83
+Revision ID: 62100b163c82
 Revises: 
-Create Date: 2025-03-22 15:24:59.509253
+Create Date: 2025-04-05 15:24:10.382609
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import pandas as pd
 
 
 # revision identifiers, used by Alembic.
-revision: str = '21d14d34ab83'
+revision: str = '62100b163c82'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,6 +24,12 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('importance', sa.Integer(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('breaking',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('description', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('device_type',
@@ -58,6 +63,15 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['device_type_id'], ['device_type.id'], ),
     sa.ForeignKeyConstraint(['manufacturer_id'], ['manufacturer.id'], ),
     sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('service_breaking',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('service_id', sa.Integer(), nullable=False),
+    sa.Column('breaking_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['breaking_id'], ['breaking.id'], ),
+    sa.ForeignKeyConstraint(['service_id'], ['service.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('service_id', 'breaking_id', name='indx_uniq_service_breaking')
     )
     op.create_table('user',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -105,7 +119,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('order_device_service',
-    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('order_id', sa.Integer(), nullable=False),
     sa.Column('device_service_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['device_service_id'], ['device_service.id'], ),
@@ -113,8 +127,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('order_id', 'device_service_id', name='indx_uniq')
     )
-
-
     # ### end Alembic commands ###
 
 
@@ -125,10 +137,12 @@ def downgrade() -> None:
     op.drop_table('order')
     op.drop_table('device')
     op.drop_table('user')
+    op.drop_table('service_breaking')
     op.drop_table('manufacturer_device_type')
     op.drop_table('service')
     op.drop_table('order_status')
     op.drop_table('manufacturer')
     op.drop_table('device_type')
+    op.drop_table('breaking')
     op.drop_table('access_level')
     # ### end Alembic commands ###

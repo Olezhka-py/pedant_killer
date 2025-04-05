@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 from pydantic import ValidationError
+import logging
 
 from pedant_killer.кeyboards.question import get_users_target, agreement
 from pedant_killer.containers import container
@@ -13,6 +14,7 @@ from pedant_killer.schemas.user_schema import UserPostDTO, UserPartialDTO
 
 base_router = Router()
 user = container.user_service()
+bot_cmd_start_logger = logging.getLogger('bot_cmd_start_logger')
 
 
 @base_router.message(CommandStart())
@@ -35,12 +37,14 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
             reply_markup=get_users_target(),
             one_time_keyboard=True
         )
+        bot_cmd_start_logger.info(f'Клиент :{message.from_user.id} есть в базе')
 
 
 @base_router.callback_query(F.data == 'agree')
 async def handler_agree(callback: CallbackQuery):
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.edit_text("✅ Вы успешно приняли соглашение. Добро пожаловать!")
+    bot_cmd_start_logger.info(f'Соглашение об обработке персональных данных принято клиентом {callback.from_user.id}')
 
     try:
         user_dto = UserPostDTO(access_level_id=1,
@@ -63,7 +67,7 @@ async def handler_agree(callback: CallbackQuery):
             )
 
     except ValidationError as e:
-        # TODO: добавить логгирование
+        bot_cmd_start_logger.info(f'Произошла ошибка при регистрации пользователя {callback.from_user.id} в системе')
         await callback.message.answer(
             f'Произошла ошибка при регистрации пользователя: {e}',
             reply_markup=get_users_target(),

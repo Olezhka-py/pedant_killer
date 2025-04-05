@@ -39,10 +39,10 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
 
                 order_orm = order.scalars().first()
                 device_service_orm = device_service.scalars().first()
-                self._model_orm.order.append(order_orm)
+                device_service.order.append(order_orm)
                 #await self._session.flush() #TODO: Проверить, нужна ли строчка
                 await session.commit()
-                await session.refresh(order_orm)
+                await session.refresh(device_service_orm)
                 return device_service_orm.id
 
         except SQLAlchemyError as e:
@@ -100,6 +100,7 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
                         .filter_by(id=instance_id))
                 instance = await session.execute(stmt)
                 result = instance.scalars().first()
+
                 return result
 
         except SQLAlchemyError as e:
@@ -126,6 +127,7 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
                         .filter_by(id=instance_id))
                 instance = await session.execute(stmt)
                 result = instance.scalars().first()
+
                 return result
 
         except SQLAlchemyError as e:

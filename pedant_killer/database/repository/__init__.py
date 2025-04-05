@@ -10,3 +10,4 @@ from pedant_killer.database.repository.service_repository import ServiceReposito
 from pedant_killer.database.repository.access_level_repository import AccessLevelRepository
 from pedant_killer.database.repository.order_status_repository import OrderStatusRepository
 from pedant_killer.database.repository.order_device_service_repository import OrderDeviceServiceRepository
+from pedant_killer.database.repository.breaking_repository import BreakingRepository

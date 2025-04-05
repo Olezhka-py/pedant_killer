@@ -16,5 +16,5 @@ class ManufacturerDeviceTypeOrm(Base):
     manufacturer_id: Mapped[int] = mapped_column(ForeignKey('manufacturer.id'))
     device_type_id: Mapped[int] = mapped_column(ForeignKey('device_type.id'))
 
-    manufacturer: Mapped['ManufacturerOrm'] = relationship(foreign_keys=[manufacturer_id])
+    manufacturer: Mapped['ManufacturerOrm'] = relationship()
     device_type: Mapped['DeviceTypeOrm'] = relationship()

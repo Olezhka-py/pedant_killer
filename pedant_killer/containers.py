@@ -110,6 +110,15 @@ class Container(containers.DeclarativeContainer):
         repository=order_status_repository
     )
 
+    breaking_repository = providers.Factory(
+        BreakingRepository,
+        session_factory=db.provided.session
+    )
+    breaking_service = providers.Factory(
+        BreakingService,
+        repository=breaking_repository
+    )
+
 
 container = Container()
 container.config.from_pydantic(config.Config())
