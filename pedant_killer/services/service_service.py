@@ -1,7 +1,11 @@
 from typing import TYPE_CHECKING
 
-from pedant_killer.schemas.service_schema import ServiceDTO, BaseIdDTO, ServicePostDTO, ServicePartialDTO
-from pedant_killer.schemas.service_schema import ServiceBreakingDTO
+from pedant_killer.schemas.service_schema import (ServiceDTO,
+                                                  BaseIdDTO,
+                                                  ServicePostDTO,
+                                                  ServicePartialDTO,
+                                                  ServiceIdListDTO)
+from pedant_killer.schemas.service_breaking_schema import ServiceBreakingRelDTO
 if TYPE_CHECKING:
     from pedant_killer.database.repository import ServiceRepository
 
@@ -32,15 +36,16 @@ class ServiceService:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [ServiceDTO.model_validate(result_orm, from_attributes=True)]
+            return [ServiceDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 
-    async def get_relationship_service_breaking(self, model_dto: BaseIdDTO) -> list[ServiceBreakingDTO] | None:
-        result_orm = await self._repository.get_breaking(instance_id=model_dto.id)
+    async def get_relationship_breaking(self, model_dto: BaseIdDTO | ServiceIdListDTO
+                                        ) -> list[ServiceBreakingRelDTO] | None:
+        result_orm = await self._repository.get_breaking(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [ServiceBreakingDTO.model_validate(res, from_attributes=True) for res in result_orm]
+            return [ServiceBreakingRelDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
     async def get_all_service(self) -> list[ServiceDTO] | None:
         result_orm = await self._repository.get()

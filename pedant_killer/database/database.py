@@ -16,7 +16,7 @@ class Base(DeclarativeBase):
 
 class Database:
     def __init__(self, db_url: str) -> None:
-        self._engine = create_async_engine(db_url, echo=False)
+        self._engine = create_async_engine(db_url, echo=False, pool_size=10, max_overflow=5)
         self._session_factory = async_sessionmaker(self._engine)
 
     @asynccontextmanager

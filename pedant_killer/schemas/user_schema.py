@@ -1,12 +1,10 @@
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from phonenumbers import is_valid_number, parse
 from pydantic import Field, field_validator
 
 from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
-if TYPE_CHECKING:
-    from pedant_killer.schemas.access_level_schema import AccessLevelDTO
-    from pedant_killer.schemas.order_schema import OrderDTO
+from pedant_killer.schemas.access_level_schema import AccessLevelDTO
 
 
 class UserPostDTO(CoreModel):
@@ -22,7 +20,7 @@ class UserPostDTO(CoreModel):
         if phone is None:
             return None
 
-        parsed_number = parse(phone, None)
+        parsed_number = parse(phone, "RU")
 
         if is_valid_number(parsed_number):
             return phone
@@ -39,17 +37,9 @@ class UserPartialDTO(UserDTO):
     pass
 
 
-class UserOrdersClientRelDTO(UserDTO):
-    orders_client: 'list[OrderDTO] | None' = None
-
-
-class UserOrdersMasterRelDTO(UserDTO):
-    orders_master: 'list[OrderDTO] | None' = None
-
-
 class UserAccessLevelRelDTO(UserDTO):
     access_level: 'AccessLevelDTO'
 
 
-class UserAllRelDTO(UserOrdersClientRelDTO, UserOrdersMasterRelDTO, UserAccessLevelRelDTO):
-    pass
+# class UserAllRelDTO(UserOrdersClientRelDTO, UserOrdersMasterRelDTO, UserAccessLevelRelDTO):
+#     pass

@@ -10,13 +10,14 @@ from pedant_killer.database.repository.core_repository import CoreRepository
 from pedant_killer.database.database import database_logger
 from pedant_killer.database.models.service_orm import ServiceOrm
 from pedant_killer.database.models.breaking_orm import BreakingOrm
+from pedant_killer.database.models.service_breaking import ServiceBreakingOrm
 
 
 class BreakingRepository(CoreRepository[BreakingOrm]):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         super().__init__(session_factory=session_factory, model_orm=BreakingOrm)
 
-    async def save_service_breaking(self, service_id: int, breaking_id: int) -> int | None:
+    async def save_breaking_service(self, service_id: int, breaking_id: int) -> int | None:
         try:
             async with self._session_factory() as session:
                 stmt_service = select(ServiceOrm).options(selectinload(ServiceOrm.breaking)).filter_by(id=service_id)
@@ -31,7 +32,15 @@ class BreakingRepository(CoreRepository[BreakingOrm]):
                 breaking_orm.service.append(service_orm)
                 await session.commit()
                 await session.refresh(breaking_orm)
-                return breaking_orm.id
+
+                stmt_service_breaking = select(ServiceBreakingOrm).where(
+                    ServiceBreakingOrm.service_id == service_id,
+                    ServiceBreakingOrm.breaking_id == breaking_id)
+
+                service_breaking_result = await session.execute(stmt_service_breaking)
+                service_breaking_orm = service_breaking_result.scalars().first()
+
+                return service_breaking_orm.id
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при создании связи между таблицами service и breaking: {e}')

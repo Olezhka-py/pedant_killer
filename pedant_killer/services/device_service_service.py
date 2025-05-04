@@ -1,13 +1,15 @@
 from typing import TYPE_CHECKING
 
-from pedant_killer.schemas.device_service_schema import (DeviceServiceOrderRelDTO,
-                                                         DeviceServicePartialDTO,
+from pedant_killer.database.specification import IdInListSpecification
+from pedant_killer.schemas.device_service_schema import (DeviceServicePartialDTO,
                                                          DeviceServicePostDTO,
                                                          DeviceServiceDTO,
                                                          DeviceServiceDeviceRelDTO,
                                                          DeviceServiceServiceRelDTO,
                                                          DeviceServiceRelDTO,
-                                                         BaseIdDTO)
+                                                         BaseIdDTO,
+                                                         DeviceServiceDeviceIdAndListServiceId)
+from pedant_killer.schemas.order_device_service_schema import DeviceServiceOrderRelDTO
 if TYPE_CHECKING:
     from pedant_killer.database.repository import DeviceServiceRepository
 
@@ -25,7 +27,7 @@ class DeviceServiceService:
         return None
 
     async def save_relationship_device_service_order(self, device_service_id_dto: BaseIdDTO, order_id_dto: BaseIdDTO
-                                               ) -> list[BaseIdDTO] | None:
+                                                     ) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save_device_service_order(
             order_id=order_id_dto.id,
             device_service_id=device_service_id_dto.id
@@ -60,11 +62,23 @@ class DeviceServiceService:
 
         return None
 
-    async def get_relationship_service(self, model_dto: BaseIdDTO) -> list[DeviceServiceServiceRelDTO] | None:
-        result_orm = await self._repository.get_service(instance_id=model_dto.id)
+    async def get_relationship_service(self, model_dto: BaseIdDTO | DeviceServicePartialDTO
+                                       ) -> list[DeviceServiceServiceRelDTO] | None:
+        result_orm = await self._repository.get_service(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
-            return [DeviceServiceServiceRelDTO.model_validate(result_orm, from_attributes=True)]
+            return [DeviceServiceServiceRelDTO.model_validate(res, from_attributes=True) for res in result_orm]
+
+        return None
+
+    async def get_relationship_service_by_device_id_and_list_service_id(self,
+                                                                        model_dto: DeviceServiceDeviceIdAndListServiceId
+                                                                        ) -> list[DeviceServiceServiceRelDTO] | None:
+        result_orm = await self._repository.get_service(specification=IdInListSpecification,
+                                                        **model_dto.model_dump(exclude_none=True))
+
+        if result_orm:
+            return [DeviceServiceServiceRelDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
         return None
 

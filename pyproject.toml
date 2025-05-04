@@ -32,7 +32,7 @@ black = "^24.4.2"
 mypy = "^1.14.1"
 
 [tool.poetry.scripts]
-bot = "pedant_killer.main:run"
+bot = "pedant_killer.main:main"
 
 [build-system]
 requires = ["poetry-core"]

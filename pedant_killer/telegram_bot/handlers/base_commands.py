@@ -8,7 +8,7 @@ from aiogram.types import Message, CallbackQuery
 from pydantic import ValidationError
 import logging
 
-from pedant_killer.кeyboards.question import get_users_target, agreement
+from pedant_killer.telegram_bot.кeyboards.question import get_users_target, agreement
 from pedant_killer.containers import container
 from pedant_killer.schemas.user_schema import UserPostDTO, UserPartialDTO
 
@@ -28,8 +28,12 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         )
 
     else:
-        await message.answer(
-            f'<b>Здравствуйте!</b> {message.from_user.first_name} {message.from_user.last_name}, '
+        user_id = user_get_result[0].id
+        await state.update_data(user_id=user_id)
+        first_name = message.from_user.first_name if message.from_user.first_name is not None else ''
+        last_name = message.from_user.last_name if message.from_user.last_name is not None else ''
+        message_hello = await message.answer(
+            text=f'<b>Здравствуйте!</b> {first_name} {last_name},\n'
             f'Меня зовут <b>{choice(["Александр", "Олег"])}</b> 🧑‍💼\n\n'
             f'✅ Давайте я Вас проконсультирую\n\n'
             f'Нажмите нужную кнопку, чтобы получить быстрый ответ 👇',
@@ -39,25 +43,31 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         )
         bot_cmd_start_logger.info(f'Клиент :{message.from_user.id} есть в базе')
 
+        await state.update_data(message_hello=message_hello)
+
 
 @base_router.callback_query(F.data == 'agree')
-async def handler_agree(callback: CallbackQuery):
+async def handler_agree(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.edit_text("✅ Вы успешно приняли соглашение. Добро пожаловать!")
     bot_cmd_start_logger.info(f'Соглашение об обработке персональных данных принято клиентом {callback.from_user.id}')
-
+    first_name = callback.message.from_user.first_name if callback.message.from_user.first_name is not None else ''
+    last_name = callback.message.from_user.last_name if callback.message.from_user.last_name is not None else ''
     try:
         user_dto = UserPostDTO(access_level_id=1,
                                telegram_username=callback.from_user.username,
                                telegram_id=callback.from_user.id,
-                               full_name=callback.from_user.full_name,
+                               full_name=f'{first_name} {last_name}'.strip(),
                                )
 
         user_save_result = await user.save_user(user_dto)
         if user_save_result:
+            user_id = user_save_result[0].id
+            await state.update_data(user_id=user_id)
 
-            await callback.message.answer(
-                f'<b>Здравствуйте!</b> {callback.from_user.first_name} {callback.from_user.last_name}, '
+            message_hello = await callback.message.answer(
+                f'<b>Здравствуйте!</b> {callback.from_user.first_name if callback.from_user.first_name is not None else ''}'
+                f' {callback.from_user.last_name if callback.from_user.last_name is not None else ''},'
                 f'Меня зовут <b>{choice(["Александр", "Олег"])}</b> 🧑‍💼\n\n'
                 f'✅ Давайте я Вас проконсультирую\n\n'
                 f'Нажмите нужную кнопку, чтобы получить быстрый ответ 👇',
@@ -65,7 +75,7 @@ async def handler_agree(callback: CallbackQuery):
                 reply_markup=get_users_target(),
                 one_time_keyboard=True
             )
-
+            await state.update_data(message_hello=message_hello)
     except ValidationError as e:
         bot_cmd_start_logger.info(f'Произошла ошибка при регистрации пользователя {callback.from_user.id} в системе')
         await callback.message.answer(

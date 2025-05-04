@@ -1,9 +1,9 @@
 from pydantic import Field
 
-from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
+from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional, BaseModel
 from pedant_killer.schemas.service_schema import ServiceDTO
 from pedant_killer.schemas.device_schema import DeviceManufacturerDeviceTypeRelDTO
-from pedant_killer.schemas.order_schema import OrderDTO
+from pedant_killer.schemas.service_breaking_schema import ServiceBreakingRelDTO
 
 
 class DeviceServicePostDTO(CoreModel):
@@ -27,12 +27,17 @@ class DeviceServiceDeviceRelDTO(DeviceServiceDTO):
 
 
 class DeviceServiceServiceRelDTO(DeviceServiceDTO):
-    service: ServiceDTO
+    service: 'ServiceDTO'
 
 
-class DeviceServiceOrderRelDTO(DeviceServiceDTO):
-    order: 'list[OrderDTO] | None' = None
+class DeviceServiceServiceBreakingDTO(DeviceServiceDTO):
+    service: 'ServiceBreakingRelDTO'
 
 
 class DeviceServiceRelDTO(DeviceServiceDeviceRelDTO, DeviceServiceServiceRelDTO):
     pass
+
+
+class DeviceServiceDeviceIdAndListServiceId(BaseModel):
+    device_id: int = Field(ge=1)
+    service_id: list[int]

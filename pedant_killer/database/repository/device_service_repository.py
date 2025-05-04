@@ -1,5 +1,6 @@
 import asyncio
 from typing import Sequence
+from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -12,6 +13,7 @@ from pedant_killer.database.models.device_orm import DeviceOrm
 from pedant_killer.database.models.manufacturer_device_type_orm import ManufacturerDeviceTypeOrm
 from pedant_killer.database.models.device_service_orm import DeviceServiceOrm
 from pedant_killer.database.models.order_orm import OrderOrm
+from pedant_killer.database.specification import Specification, ObjectExistsByRowsSpecification
 
 
 class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
@@ -93,20 +95,21 @@ class DeviceServiceRepository(CoreRepository[DeviceServiceOrm]):
                                   f' {instance_id}: {e}')
             return None
 
-    async def get_service(self, instance_id: int) -> 'DeviceServiceOrm | None':
+    async def get_service(self, specification: type[Specification] = ObjectExistsByRowsSpecification,
+                          **kwargs: dict[str, int | list[int]]) -> Sequence['DeviceServiceOrm'] | None:
         try:
             async with self._session_factory() as session:
                 stmt = (select(self._model_orm).options(joinedload(self._model_orm.service))
-                        .filter_by(id=instance_id))
+                        .where(await specification.is_satisfied(self._model_orm, kwargs)))
                 instance = await session.execute(stmt)
-                result = instance.scalars().first()
-
+                result = instance.scalars().all()
+                database_logger.info(f'Данные получены {result=}')
                 return result
 
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении устройства через relationship из таблицы: {self._model_orm}'
-                                  f' по id:'
-                                  f' {instance_id}: {e}')
+                                  f' по строчкам:'
+                                  f' {kwargs}: {e}')
             return None
 
     async def get_device_service(self, instance_id: int) -> 'DeviceServiceOrm | None':

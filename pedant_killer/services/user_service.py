@@ -3,10 +3,9 @@ from typing import TYPE_CHECKING
 from pedant_killer.schemas.user_schema import (UserDTO,
                                                UserPartialDTO,
                                                UserPostDTO,
-                                               UserOrdersMasterRelDTO,
-                                               UserOrdersClientRelDTO,
                                                UserAccessLevelRelDTO,
                                                BaseIdDTO)
+from pedant_killer.schemas.order_user_schema import UserOrdersMasterRelDTO, UserOrdersClientRelDTO
 if TYPE_CHECKING:
     from pedant_killer.database.repository import UserRepository
 

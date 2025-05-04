@@ -3,6 +3,7 @@ from dependency_injector import containers, providers
 from pedant_killer.database.database import Database
 from pedant_killer.database.repository import *
 from pedant_killer.services import *
+from pedant_killer.gateway.api_yandex_map import YandexMapApi
 from pedant_killer import config
 
 
@@ -18,6 +19,15 @@ class Container(containers.DeclarativeContainer):
     db = providers.Singleton(
         Database,
         db_url=config.database_url_asyncpg
+    )
+
+    yandex_map_api = providers.Factory(
+        YandexMapApi,
+        yandex_api_key=config.API_YANDEX_MAP
+    )
+    yandex_map_service = providers.Factory(
+        YandexMapService,
+        yandex_map_api=yandex_map_api
     )
 
     manufacturer_repository = providers.Factory(

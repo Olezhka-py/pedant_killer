@@ -45,7 +45,8 @@ class CoreRepository[T: Base]:
             database_logger.error(f'Ошибка при получении данных из таблицы {self._model_orm} по {rows=}: {e}')
             return None
 
-    async def delete(self, specification: type[Specification] = ObjectExistsByRowsSpecification, **row) -> bool | None:
+    async def delete(self, specification: type[Specification] = ObjectExistsByRowsSpecification,
+                     **row) -> bool | None:
         try:
             async with self._session_factory() as session:
                 stmt = delete(self._model_orm).where(await specification.is_satisfied(self._model_orm, row))

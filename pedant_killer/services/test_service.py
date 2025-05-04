@@ -7,10 +7,10 @@ from pydantic import ValidationError
 
 
 async def ggvp():
-    m = container.service_service()
+    m = container.manufacturer_service()
     breaking_id = BaseIdDTO(id=3)
-    service_id = BaseIdDTO(id=2)
-    g = await m.save_relationship_service_breaking(service_dto=service_id, breaking_dto=breaking_id)
+    service_id = BaseIdDTO(id=1)
+    g = await m.get_all_manufacturer()
     # m = await s.save_user(27, 'i_am_gg', 'sdfsdf', 'dima', 'cherepovets', '9000000000')
     print(g)
 

@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING
+from pydantic import Field
 
-from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
-if TYPE_CHECKING:
-    from pedant_killer.schemas.breaking_schemas import BreakingDTO
+from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional, BaseModel
+from pedant_killer.schemas.breaking_schemas import BreakingDTO
 
 
 class ServicePostDTO(CoreModel):
@@ -19,5 +18,5 @@ class ServicePartialDTO(ServiceDTO):
     pass
 
 
-class ServiceBreakingDTO(ServiceDTO):
-    breaking: list['BreakingDTO']
+class ServiceIdListDTO(BaseModel):
+    service_id: list[int]

@@ -6,6 +6,7 @@ from pedant_killer.schemas.device_schema import (DevicePostDTO,
                                                  DevicePartialDTO,
                                                  BaseIdDTO
                                                  )
+from pedant_killer.database.specification import DeleteSpaceAndLowerCaseSpecification, ObjectExistsByRowsSpecification
 if TYPE_CHECKING:
     from pedant_killer.database.repository import DeviceRepository
 
@@ -24,6 +25,15 @@ class DeviceService:
 
     async def get_device(self, model_dto: DevicePartialDTO | BaseIdDTO) -> list[DeviceDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
+
+        if result_orm:
+            return [DeviceDTO.model_validate(res, from_attributes=True) for res in result_orm]
+
+        return None
+
+    async def get_device_standardize(self, model_dto: DevicePartialDTO | BaseIdDTO) -> list[DeviceDTO] | None:
+        result_orm = await self._repository.get(specification_filter=DeleteSpaceAndLowerCaseSpecification,
+                                                **model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [DeviceDTO.model_validate(res, from_attributes=True) for res in result_orm]

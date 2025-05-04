@@ -25,17 +25,12 @@ class OrderRepository(CoreRepository[OrderOrm]):
                                        .options(joinedload(DeviceServiceOrm.order))
                                        .filter_by(id=device_service_id))
 
-            async with asyncio.TaskGroup() as tg:
-                order_task = tg.create_task(session.execute(stmt_order))
-                device_service_task = tg.create_task(session.execute(stmt_device_service))
-
-            order = await order_task
-            device_service = await device_service_task
+            order = await session.execute(stmt_order)
+            device_service = await session.execute(stmt_device_service)
 
             order_result = order.scalars().first()
-            device_service_result = device_service.scalars().first
-            order_result.device_service.append(device_service_result)  # type: ignore
-            #await self._session.flush()  TODO: Проверить, нужна ли строчка
+            device_service_result = device_service.scalars().first()
+            order_result.device_service.append(device_service_result)
             await session.commit()
             await session.refresh(order_result)
             return order_result.id

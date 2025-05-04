@@ -37,6 +37,7 @@ def upgrade() -> None:
     df_device_service = df[['Устройство', 'Услуга', 'Цена', 'Гарантия']]
     df_breaking = pd.read_csv('pedant_killer/data/breaking.csv')
     df_breaking = df_breaking['Поломка']
+    df_breaking_service = pd.read_csv('pedant_killer/data/breaking_service.csv')
 
     for row in df_manufacturer.tolist():
 
@@ -125,6 +126,33 @@ def upgrade() -> None:
              'warranty': warranty}
         )
 
+    for row in df_breaking.tolist():
+        conn.execute(
+            sa.text("""
+               INSERT INTO breaking(name) VALUES
+               (:breaking)
+               """),
+            {'breaking': row}
+        )
+
+    for _, row in df_breaking_service.iterrows():
+        service = row['Услуга']
+        breaking = row['Поломка']
+
+        conn.execute(
+            sa.text("""
+                INSERT INTO service_breaking(service_id, breaking_id) 
+                VALUES (
+                    (SELECT id FROM service
+                    WHERE name = :service_name),
+                    (SELECT id FROM breaking
+                    WHERE name = :breaking_name)
+                )
+            """),
+            {'service_name': service,
+             'breaking_name': breaking}
+        )
+
     conn.execute(
         sa.text("""
         INSERT INTO access_level (name, importance) VALUES
@@ -150,16 +178,9 @@ def upgrade() -> None:
         ('Доставка', 'Производится доставка заказа')
         """)
     )
+
     alembic_logger.info('Статичные данные добавлены в таблицы')
 
-    for row in df_breaking.tolist():
-        conn.execute(
-            sa.text("""
-            INSERT INTO breaking(name) VALUES
-            (:breaking)
-            """),
-            {'breaking': row}
-        )
 
     # ### end Alembic commands ###
 
@@ -168,7 +189,9 @@ def downgrade() -> None:
     conn = op.get_bind()
     conn.execute(
         sa.text("""
-        TRUNCATE TABLE manufacturer, device_type, manufacturer_device_type, device, access_level, order_status CASCADE
+        TRUNCATE TABLE manufacturer, device_type, manufacturer_device_type, device, device_service,
+        access_level, order_status, breaking, service, service_breaking
+         CASCADE
         """)
     )
     alembic_logger.info('Статичные данные удалены из таблиц')

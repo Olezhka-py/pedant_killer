@@ -2,12 +2,12 @@ from typing import TYPE_CHECKING
 
 from pedant_killer.schemas.order_schema import (BaseIdDTO,
                                                 OrderDTO,
-                                                OrderDeviceServiceRelDTO,
-                                                OrderClientRelDTO,
-                                                OrderMasterRelDTO,
                                                 OrderOrderStatusRelDTO,
                                                 OrderPostDTO,
                                                 OrderPartialDTO)
+from pedant_killer.schemas.order_device_service_schema import OrderDeviceServiceRelDTO
+from pedant_killer.schemas.order_user_schema import OrderClientRelDTO, OrderMasterRelDTO
+
 if TYPE_CHECKING:
     from pedant_killer.database.repository import OrderRepository
 

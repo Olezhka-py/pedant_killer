@@ -17,6 +17,8 @@ class Config(BaseSettings):
     DB_PASS_TEST: str
     DB_NAME_TEST: str
 
+    API_YANDEX_MAP: str
+
     @computed_field
     @property
     def database_url_asyncpg(self) -> str:

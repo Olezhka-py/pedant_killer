@@ -1,25 +1,15 @@
-from typing import TYPE_CHECKING
-
 from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
-
-from pedant_killer.schemas.service_schema import ServiceDTO
-if TYPE_CHECKING:
-    pass
 
 
 class BreakingPostDTO(CoreModel):
     name: str
-    description: str
+    description: str | None = None
 
 
-class BreakingDTO(BaseIdDTO, CoreModel):
+class BreakingDTO(BaseIdDTO, BreakingPostDTO):
     pass
 
 
 @optional()
 class BreakingPartialDTO(BreakingDTO):
     pass
-
-
-class BreakingServiceRelDTO(BreakingDTO):
-    service: list[ServiceDTO]

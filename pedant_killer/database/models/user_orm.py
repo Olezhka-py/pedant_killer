@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, BigInteger
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from pedant_killer.database.models.annotated import intpk
@@ -15,7 +15,7 @@ class UserOrm(Base):
     id: Mapped[intpk]
     access_level_id: Mapped[int] = mapped_column(ForeignKey('access_level.id'))
     telegram_username: Mapped[str]
-    telegram_id: Mapped[int]
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True)
     full_name: Mapped[str]
     address: Mapped[str | None] = mapped_column(default=None, nullable=True)
     phone: Mapped[str | None] = mapped_column(default=None, nullable=True)

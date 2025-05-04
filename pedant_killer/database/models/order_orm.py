@@ -21,6 +21,9 @@ class OrderOrm(Base):
     status_updated_at: Mapped[updated_at]
     sent_from_address: Mapped[str | None] = mapped_column(default=None)
     return_to_address: Mapped[str | None] = mapped_column(default=None)
+    description_model_device: Mapped[str | None] = mapped_column(default=None)
+    breaking_id: Mapped[int | None] = mapped_column(ForeignKey('breaking.id'), default=None)
+    description_breaking: Mapped[str | None] = mapped_column(default=None)
     comment: Mapped[str | None] = mapped_column(default=None)
     rating: Mapped[str | None] = mapped_column(default=None)
 

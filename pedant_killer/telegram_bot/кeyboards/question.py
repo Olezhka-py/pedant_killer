@@ -29,28 +29,24 @@ def get_users_target() -> ReplyKeyboardMarkup:
 
 
 def get_users_phone() -> ReplyKeyboardMarkup:
-    builder = ReplyKeyboardBuilder()
-    builder.row(
-        KeyboardButton(text='Отправить номер телефона', request_contact=True),
-        KeyboardButton(text='Назад')
-    )
-    return builder.as_markup(
+    kb = ReplyKeyboardBuilder()
+    kb.button(text='Отправить номер телефона', request_contact=True)
+    return kb.as_markup(
         resize_keyboard=True,
+        input_field_placeholder='Выберите нужный вариант',
         one_time_keyboard=True
     )
 
 
-def get_yes_or_no() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardBuilder()
-    kb.button(text='Да')
-    kb.button(text='Нет')
-    kb.button(text='Назад')
+def get_yes_or_no() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.add(
+        InlineKeyboardButton(text='Да', callback_data='yes'),
+        InlineKeyboardButton(text='Нет', callback_data='no'),
+        InlineKeyboardButton(text='Назад', callback_data='exit_yes_no'),
+           )
     kb.adjust(2)
-    return kb.as_markup(
-        resize_keyboard=True,
-        one_time_keyboard=True,
-        input_field_placeholder='Выберите вариант'
-    )
+    return kb.as_markup()
 
 
 def get_users_location() -> ReplyKeyboardMarkup:
@@ -63,13 +59,17 @@ def get_users_location() -> ReplyKeyboardMarkup:
     )
 
 
-def back() -> ReplyKeyboardMarkup:
-    kb = ReplyKeyboardBuilder()
-    kb.button(text='Назад')
-    return kb.as_markup(
-        resize_keyboard=True,
-        one_time_keyboard=True
-    )
+def same_and_back() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text='Тот же', callback_data='same')
+    kb.button(text='Назад', callback_data='exit')
+    return kb.as_markup()
+
+
+def back() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.add(InlineKeyboardButton(text='Назад', callback_data='exit'))
+    return kb.as_markup()
 
 
 def same() -> ReplyKeyboardMarkup:
@@ -93,5 +93,18 @@ def agreement() -> InlineKeyboardMarkup:
         text='Я соглашаюсь ✍️',
         callback_data='agree'
     ))
+
+    return kb.as_markup()
+
+
+def get_city_user() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    kb.add(
+        InlineKeyboardButton(text='Москва', callback_data='москва'),
+        InlineKeyboardButton(text='Другой город', callback_data='другое'),
+        InlineKeyboardButton(text='Назад', callback_data='exit_city')
+    )
+    kb.adjust(2)
 
     return kb.as_markup()

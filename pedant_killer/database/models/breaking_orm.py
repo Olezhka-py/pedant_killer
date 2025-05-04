@@ -4,7 +4,6 @@ from sqlalchemy.orm import Mapped, relationship, mapped_column
 
 from pedant_killer.database.models.annotated import intpk
 from pedant_killer.database.database import Base
-from pedant_killer.database.models.service_breaking import ServiceBreakingOrm
 if TYPE_CHECKING:
     from pedant_killer.database.models.service_orm import ServiceOrm
 

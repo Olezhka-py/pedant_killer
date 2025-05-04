@@ -47,10 +47,13 @@ class ServiceRepository(CoreRepository[ServiceOrm]):
 
             return None
 
-    async def get_breaking(self, instance_id: int) -> Sequence[ServiceOrm] | None:
+    async def get_breaking(self, service_id: int | list[int]) -> Sequence[ServiceOrm] | None:
         try:
             async with self._session_factory() as session:
-                stmt = select(ServiceOrm).options(selectinload(ServiceOrm.breaking)).filter_by(id=instance_id)
+                stmt = (select(self._model_orm)
+                        .options(selectinload(self._model_orm.breaking))
+                        .where(self._model_orm.id.in_(service_id))
+                        )
                 instance = await session.execute(stmt)
                 result = instance.scalars().all()
 
@@ -59,6 +62,6 @@ class ServiceRepository(CoreRepository[ServiceOrm]):
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при получении услуги и поломки через relationship'
                                   f'из таблицы:{self._model_orm}'
-                                  f'по id:{instance_id}: {e}')
+                                  f'по id:{service_id}: {e}')
             return None
 

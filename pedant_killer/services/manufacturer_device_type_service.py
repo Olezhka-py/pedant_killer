@@ -24,7 +24,9 @@ class ManufacturerDeviceTypeService:
 
         return None
 
-    async def get_manufacturer_device_type(self, model_dto: ManufacturerDeviceTypePartialDTO | BaseIdDTO
+    async def get_manufacturer_device_type(self, model_dto: (ManufacturerDeviceTypePartialDTO
+                                                             | BaseIdDTO
+                                                             | ManufacturerDeviceTypePostDTO)
                                            ) -> list[ManufacturerDeviceTypeDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
