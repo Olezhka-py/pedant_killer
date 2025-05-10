@@ -1,18 +1,15 @@
-from typing import TYPE_CHECKING
-
 from pedant_killer.schemas.order_status_schema import (OrderStatusPostDTO,
                                                        OrderStatusPartialDTO,
                                                        OrderStatusDTO,
                                                        BaseIdDTO)
-if TYPE_CHECKING:
-    from pedant_killer.database.repository import OrderStatusRepository
+from pedant_killer.database.repository import OrderStatusRepository
 
 
 class OrderStatusService:
     def __init__(self, repository: 'OrderStatusRepository') -> None:
         self._repository = repository
 
-    async def save_order_status(self, model_dto: OrderStatusPostDTO) -> list[BaseIdDTO] | None:
+    async def save(self, model_dto: OrderStatusPostDTO) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -20,7 +17,7 @@ class OrderStatusService:
 
         return None
 
-    async def get_order_status(self, model_dto: OrderStatusPartialDTO | BaseIdDTO) -> list[OrderStatusDTO] | None:
+    async def get(self, model_dto: OrderStatusPartialDTO | BaseIdDTO) -> list[OrderStatusDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -28,7 +25,7 @@ class OrderStatusService:
 
         return None
 
-    async def get_all_order_status(self) -> list[OrderStatusDTO] | None:
+    async def get_all(self) -> list[OrderStatusDTO] | None:
         result_orm = await self._repository.get()
 
         if result_orm:
@@ -36,8 +33,8 @@ class OrderStatusService:
 
         return None
 
-    async def delete_order_status(self, model_dto: BaseIdDTO) -> list[OrderStatusDTO] | None:
-        result_dto = await self.get_order_status(model_dto)
+    async def delete(self, model_dto: BaseIdDTO) -> list[OrderStatusDTO] | None:
+        result_dto = await self.get(model_dto)
 
         if result_dto:
             delete_result = await self._repository.delete(id=model_dto.id)
@@ -47,7 +44,7 @@ class OrderStatusService:
 
         return None
 
-    async def update_access_level(self, model_dto: OrderStatusPartialDTO) -> list[OrderStatusDTO] | None:
+    async def update(self, model_dto: OrderStatusPartialDTO) -> list[OrderStatusDTO] | None:
         result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:

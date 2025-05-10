@@ -1,20 +1,16 @@
-from typing import TYPE_CHECKING
-
-from pedant_killer.schemas.service_schema import (ServiceDTO,
-                                                  BaseIdDTO,
-                                                  ServicePostDTO,
-                                                  ServicePartialDTO,
-                                                  ServiceIdListDTO)
-from pedant_killer.schemas.service_breaking_schema import ServiceBreakingRelDTO
-if TYPE_CHECKING:
-    from pedant_killer.database.repository import ServiceRepository
+from pedant_killer.schemas.service_breaking_schema import (ServiceDTO,
+                                                           BaseIdDTO,
+                                                           ServicePostDTO,
+                                                           ServicePartialDTO,
+                                                           ServiceIdListDTO, ServiceBreakingRelDTO)
+from pedant_killer.database.repository import ServiceRepository
 
 
 class ServiceService:
     def __init__(self, repository: 'ServiceRepository') -> None:
         self._repository = repository
 
-    async def save_service(self, model_dto: ServicePostDTO) -> list[BaseIdDTO] | None:
+    async def save(self, model_dto: ServicePostDTO) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -22,32 +18,23 @@ class ServiceService:
 
         return None
 
-    async def save_relationship_service_breaking(self, service_dto: BaseIdDTO,
-                                                 breaking_dto: BaseIdDTO) -> list[BaseIdDTO] | None:
-        result_orm = await self._repository.save_service_breaking(service_id=service_dto.id,
-                                                                  breaking_id=breaking_dto.id)
-
-        if result_orm:
-            return [BaseIdDTO(id=result_orm)]
-
-        return None
-
-    async def get_service(self, model_dto: ServicePartialDTO | BaseIdDTO) -> list[ServiceDTO] | None:
+    async def get(self, model_dto: ServicePartialDTO | BaseIdDTO | ServiceIdListDTO
+                  ) -> list[ServiceBreakingRelDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
-
-        if result_orm:
-            return [ServiceDTO.model_validate(res, from_attributes=True) for res in result_orm]
-
-        return None
-
-    async def get_relationship_breaking(self, model_dto: BaseIdDTO | ServiceIdListDTO
-                                        ) -> list[ServiceBreakingRelDTO] | None:
-        result_orm = await self._repository.get_breaking(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
             return [ServiceBreakingRelDTO.model_validate(res, from_attributes=True) for res in result_orm]
 
-    async def get_all_service(self) -> list[ServiceDTO] | None:
+        return None
+
+    async def get_by_id_list(self, model_dto: BaseIdDTO | ServiceIdListDTO) -> list[ServiceBreakingRelDTO] | None:
+        result_orm = await self._repository.get(specification_filter=IdInListServicesSpecification,
+                                                **model_dto.model_dump(exclude_none=True))
+
+        if result_orm:
+            return [ServiceBreakingRelDTO.model_validate(res, from_attributes=True) for res in result_orm]
+
+    async def get_all(self) -> list[ServiceDTO] | None:
         result_orm = await self._repository.get()
 
         if result_orm:
@@ -55,8 +42,8 @@ class ServiceService:
 
         return None
 
-    async def delete_service(self, model_dto: BaseIdDTO) -> list[ServiceDTO] | None:
-        result_dto = await self.get_service(model_dto)
+    async def delete(self, model_dto: BaseIdDTO) -> list[ServiceDTO] | None:
+        result_dto = await self.get(model_dto)
 
         if result_dto:
             delete_result = await self._repository.delete(id=model_dto.id)
@@ -66,7 +53,7 @@ class ServiceService:
 
         return None
 
-    async def update_service(self, model_dto: ServicePartialDTO) -> list[ServiceDTO] | None:
+    async def update(self, model_dto: ServicePartialDTO) -> list[ServiceDTO] | None:
         result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:

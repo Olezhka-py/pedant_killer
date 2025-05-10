@@ -1,3 +1,4 @@
+import aiohttp
 from dependency_injector import containers, providers
 
 from pedant_killer.database.database import Database
@@ -11,23 +12,32 @@ class Container(containers.DeclarativeContainer):
 
     wiring_config = containers.WiringConfiguration(
         modules=[
+            'pedant_killer.telegram_bot.handlers.base_commands',
+            'pedant_killer.telegram_bot.handlers.repair_or_diagnostic',
+            'pedant_killer.telegram_bot.handlers.status_order',
+            'pedant_killer.telegram_bot.keyboards.device_models'
         ],
     )
 
     config = providers.Configuration()
 
-    db = providers.Singleton(
-        Database,
-        db_url=config.database_url_asyncpg
+    aiohttp_session = providers.Resource(
+        aiohttp.ClientSession
     )
 
-    yandex_map_api = providers.Factory(
+    yandex_map_api = providers.Singleton(
         YandexMapApi,
-        yandex_api_key=config.API_YANDEX_MAP
+        yandex_api_key=config.API_YANDEX_MAP,
+        session=aiohttp_session
     )
     yandex_map_service = providers.Factory(
         YandexMapService,
         yandex_map_api=yandex_map_api
+    )
+
+    db = providers.Singleton(
+        Database,
+        db_url=config.database_url_asyncpg
     )
 
     manufacturer_repository = providers.Factory(
@@ -127,6 +137,24 @@ class Container(containers.DeclarativeContainer):
     breaking_service = providers.Factory(
         BreakingService,
         repository=breaking_repository
+    )
+
+    breaking_service_repository = providers.Factory(
+        BreakingServiceRepository,
+        session_factory=db.provided.session
+    )
+    breaking_service_service = providers.Factory(
+        BreakingServiceService,
+        repository=breaking_service_repository
+    )
+
+    order_device_service_repository = providers.Factory(
+        OrderDeviceServiceRepository,
+        session_factory=db.provided.session
+    )
+    order_device_service_service = providers.Factory(
+        OrderDeviceServiceService,
+        repository=order_device_service_repository
     )
 
 

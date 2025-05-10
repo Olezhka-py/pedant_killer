@@ -1,18 +1,15 @@
-from typing import TYPE_CHECKING
-
 from pedant_killer.schemas.manufacturer_schema import (ManufacturerPostDTO,
                                                        ManufacturerPartialDTO,
                                                        ManufacturerDTO,
                                                        BaseIdDTO)
-if TYPE_CHECKING:
-    from pedant_killer.database.repository import ManufacturerRepository
+from pedant_killer.database.repository import ManufacturerRepository
 
 
 class ManufacturerService:
     def __init__(self, repository: 'ManufacturerRepository'):
         self._repository = repository
 
-    async def save_manufacturer(self, model_dto: ManufacturerPostDTO) -> list[BaseIdDTO] | None:
+    async def save(self, model_dto: ManufacturerPostDTO) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -20,7 +17,7 @@ class ManufacturerService:
 
         return None
 
-    async def get_manufacturer(self, model_dto: ManufacturerPartialDTO | BaseIdDTO) -> list[ManufacturerDTO] | None:
+    async def get(self, model_dto: ManufacturerPartialDTO | BaseIdDTO) -> list[ManufacturerDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -28,7 +25,7 @@ class ManufacturerService:
 
         return None
 
-    async def get_all_manufacturer(self) -> list[ManufacturerDTO] | None:
+    async def get_all(self) -> list[ManufacturerDTO] | None:
         result_orm = await self._repository.get()
 
         if result_orm:
@@ -36,8 +33,8 @@ class ManufacturerService:
 
         return None
 
-    async def delete_manufacturer(self, model_dto: BaseIdDTO) -> list[ManufacturerDTO] | None:
-        result_dto = await self.get_manufacturer(model_dto)
+    async def delete(self, model_dto: BaseIdDTO) -> list[ManufacturerDTO] | None:
+        result_dto = await self.get(model_dto)
 
         if result_dto:
             delete_result = await self._repository.delete(id=model_dto.id)
@@ -47,7 +44,7 @@ class ManufacturerService:
 
         return None
 
-    async def update_manufacturer(self, model_dto: ManufacturerPartialDTO) -> list[ManufacturerDTO] | None:
+    async def update(self, model_dto: ManufacturerPartialDTO) -> list[ManufacturerDTO] | None:
         result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:

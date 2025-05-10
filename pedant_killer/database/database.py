@@ -31,3 +31,6 @@ class Database:
 
             finally:
                 await session.close()
+
+    async def shutdown(self):
+        await self._engine.dispose()

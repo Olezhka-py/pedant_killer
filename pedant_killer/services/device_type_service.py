@@ -1,15 +1,12 @@
-from typing import TYPE_CHECKING
-
 from pedant_killer.schemas.device_type_schema import DeviceTypeDTO, DeviceTypePostDTO, DeviceTypePartialDTO, BaseIdDTO
-if TYPE_CHECKING:
-    from pedant_killer.database.repository import DeviceTypeRepository
+from pedant_killer.database.repository import DeviceTypeRepository
 
 
 class DeviceTypeService:
-    def __init__(self, repository: 'DeviceTypeRepository'):
+    def __init__(self, repository: DeviceTypeRepository):
         self._repository = repository
 
-    async def save_device_type(self, model_dto: DeviceTypePostDTO) -> list[BaseIdDTO] | None:
+    async def save(self, model_dto: DeviceTypePostDTO) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -17,7 +14,7 @@ class DeviceTypeService:
 
         return None
 
-    async def get_device_type(self, model_dto: DeviceTypePartialDTO | BaseIdDTO) -> list[DeviceTypeDTO] | None:
+    async def get(self, model_dto: DeviceTypePartialDTO | BaseIdDTO) -> list[DeviceTypeDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -25,7 +22,7 @@ class DeviceTypeService:
 
         return None
 
-    async def get_all_device_type(self) -> list[DeviceTypeDTO] | None:
+    async def get_all(self) -> list[DeviceTypeDTO] | None:
         result_orm = await self._repository.get()
 
         if result_orm:
@@ -33,8 +30,8 @@ class DeviceTypeService:
 
         return None
 
-    async def delete_device_type(self, model_dto: BaseIdDTO) -> list[DeviceTypeDTO] | None:
-        result_dto = await self.get_device_type(model_dto)
+    async def delete(self, model_dto: BaseIdDTO) -> list[DeviceTypeDTO] | None:
+        result_dto = await self.get(model_dto)
 
         if result_dto:
             delete_result = await self._repository.delete(id=model_dto.id)
@@ -44,7 +41,7 @@ class DeviceTypeService:
 
         return None
 
-    async def update_device_type(self, model_dto: DeviceTypePartialDTO) -> [DeviceTypeDTO | None]:
+    async def update(self, model_dto: DeviceTypePartialDTO) -> [DeviceTypeDTO | None]:
         result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:

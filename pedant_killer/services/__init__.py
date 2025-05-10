@@ -10,3 +10,5 @@ from pedant_killer.services.service_service import ServiceService
 from pedant_killer.services.user_service import UserService
 from pedant_killer.services.breaking_service import BreakingService
 from pedant_killer.services.yandex_map_service import YandexMapService
+from pedant_killer.services.breaking_service_service import BreakingServiceService
+from pedant_killer.services.order_device_service_service import OrderDeviceServiceService

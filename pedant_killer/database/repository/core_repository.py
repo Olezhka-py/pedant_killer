@@ -22,9 +22,8 @@ class CoreRepository[T: Base]:
                 await session.commit()
                 database_logger.info(f'Запись добавлена в таблицу {self._model_orm}')
                 await session.refresh(instance)
-                return instance.id  # type: ignore
+                return instance.id
         except SQLAlchemyError as e:
-            await session.rollback()
             database_logger.error(f'Ошибка при добавлении записи в таблицу {self._model_orm}: {e}')
             return None
 
@@ -56,7 +55,6 @@ class CoreRepository[T: Base]:
                 return True
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при удалении записи из таблицы: {self._model_orm} по id: {row=}: {e}')
-            await session.rollback()
             return None
 
     async def update(self, **rows: dict[str, Any]) -> T | None:
@@ -81,5 +79,4 @@ class CoreRepository[T: Base]:
         except SQLAlchemyError as e:
             database_logger.error(f'Ошибка при обновлении записи из таблицы: {self._model_orm} по id:'
                                   f' {instance_id}: {e}')
-            await session.rollback()
             return None

@@ -1,10 +1,46 @@
-from pedant_killer.schemas.breaking_schemas import BreakingDTO
-from pedant_killer.schemas.service_schema import ServiceDTO
+from __future__ import annotations
+from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
 
 
-class ServiceBreakingRelDTO(ServiceDTO):
-    breaking: list['BreakingDTO']
+class BreakingPostDTO(CoreModel):
+    name: str
+    description: str | None = None
+
+
+class BreakingDTO(BaseIdDTO, BreakingPostDTO):
+    pass
 
 
 class BreakingServiceRelDTO(BreakingDTO):
-    service: list['ServiceDTO']
+    services: list[ServiceDTO] | None = None
+
+
+@optional()
+class BreakingPartialDTO(BreakingDTO):
+    pass
+
+
+class ServicePostDTO(CoreModel):
+    name: str
+    description: str | None = None
+
+
+class ServiceDTO(BaseIdDTO, ServicePostDTO):
+    pass
+
+
+class ServiceBreakingRelDTO(ServiceDTO):
+    breakings: list[BreakingDTO] | None = None
+
+
+@optional()
+class ServicePartialDTO(ServiceDTO):
+    pass
+
+
+class ServiceIdListDTO(CoreModel):
+    id: list[int]
+
+
+ServiceBreakingRelDTO.update_forward_refs()
+BreakingServiceRelDTO.update_forward_refs()

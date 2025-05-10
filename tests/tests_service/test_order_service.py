@@ -30,7 +30,7 @@ async def test_save_order(service: OrderService, repository: AsyncMock) -> None:
                              status_updated_at=datetime.strptime('2023-01-01 00:00:00', '%Y-%m-%d %H:%M:%S'))
 
     repository.save.return_value = 1
-    result = await service.save_order(model_dto)
+    result = await service.save(model_dto)
 
     assert result == [BaseIdDTO(id=1)]
     repository.save.assert_called_once_with(**model_dto.model_dump(exclude_none=True))
@@ -58,7 +58,7 @@ async def test_get_order(service: OrderService, repository: AsyncMock) -> None:
                                            created_at='2023-01-01 00:00:00',
                                            status_updated_at='2023-01-01 00:00:00')
 
-    result = await service.get_order(model_dto)
+    result = await service.get(model_dto)
 
     assert result == [OrderDTO(id=model_dto.id,
                                client_id=1,
@@ -102,7 +102,7 @@ async def test_get_all_orders(service: OrderService, repository: AsyncMock) -> N
                                             created_at='2023-01-01 00:00:00',
                                             status_updated_at='2023-01-01 00:00:00')]
 
-    result = await service.get_all_orders()
+    result = await service.get_all()
 
     assert result == [OrderDTO(id=1,
                                client_id=1,
@@ -123,7 +123,7 @@ async def test_delete_order(service: OrderService, repository: AsyncMock) -> Non
                                            status_updated_at='2023-01-01 00:00:00')
     repository.delete.return_value = True
 
-    result = await service.delete_order(model_dto)
+    result = await service.delete(model_dto)
 
     assert result == [OrderDTO(id=model_dto.id,
                                client_id=1,
@@ -148,7 +148,7 @@ async def test_update_order(service: OrderService, repository: AsyncMock) -> Non
                                               created_at=model_dto.created_at,
                                               status_updated_at=model_dto.status_updated_at)
 
-    result = await service.update_order(model_dto)
+    result = await service.update(model_dto)
 
     assert result == [OrderDTO(id=model_dto.id,
                                client_id=model_dto.client_id,

@@ -11,21 +11,11 @@ class ManufacturerDeviceTypePostDTO(CoreModel):
 
 
 class ManufacturerDeviceTypeDTO(BaseIdDTO, ManufacturerDeviceTypePostDTO):
-    pass
+    manufacturer: ManufacturerDTO | None
+    device_type: DeviceTypeDTO | None
 
 
 @optional()
 class ManufacturerDeviceTypePartialDTO(ManufacturerDeviceTypeDTO):
     pass
 
-
-class ManufacturerRelDTO(ManufacturerDeviceTypeDTO):
-    manufacturer: ManufacturerDTO
-
-
-class DeviceTypeRelDTO(ManufacturerDeviceTypeDTO):
-    device_type: DeviceTypeDTO
-
-
-class ManufacturerDeviceTypeRelDTO(ManufacturerRelDTO, DeviceTypeRelDTO):
-    pass

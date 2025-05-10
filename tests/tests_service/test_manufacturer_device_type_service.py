@@ -23,7 +23,7 @@ def service(repository) -> ManufacturerDeviceTypeService:
 async def test_save_manufacturer_device_type(service: ManufacturerDeviceTypeService, repository: AsyncMock) -> None:
     model_dto = ManufacturerDeviceTypePostDTO(manufacturer_id=1, device_type_id=2)
     repository.save.return_value = 1
-    result = await service.save_manufacturer_device_type(model_dto)
+    result = await service.save(model_dto)
 
     assert result == [BaseIdDTO(id=1)]
     repository.save.assert_called_once_with(manufacturer_id=1, device_type_id=2)
@@ -33,7 +33,7 @@ async def test_get_manufacturer_device_type(service: ManufacturerDeviceTypeServi
     model_dto = BaseIdDTO(id=1)
     repository.get.return_value = ManufacturerDeviceTypeOrm(id=model_dto.id, manufacturer_id=1, device_type_id=2)
 
-    result = await service.get_manufacturer_device_type(model_dto)
+    result = await service.get(model_dto)
 
     assert result == [ManufacturerDeviceTypeDTO(id=model_dto.id, manufacturer_id=1, device_type_id=2)]
     repository.get.assert_called_once_with(id=model_dto.id)
@@ -42,7 +42,7 @@ async def test_get_manufacturer_device_type(service: ManufacturerDeviceTypeServi
 async def test_get_all_manufacturer_device_types(service: ManufacturerDeviceTypeService, repository: AsyncMock) -> None:
     repository.get.return_value = [ManufacturerDeviceTypeOrm(id=1, manufacturer_id=1, device_type_id=2)]
 
-    result = await service.get_all_manufacturer_device_types()
+    result = await service.get_all()
 
     assert result == [ManufacturerDeviceTypeDTO(id=1, manufacturer_id=1, device_type_id=2)]
     repository.get.assert_called_once_with()
@@ -53,7 +53,7 @@ async def test_delete_manufacturer_device_type(service: ManufacturerDeviceTypeSe
     repository.get.return_value = ManufacturerDeviceTypeOrm(id=model_dto.id, manufacturer_id=1, device_type_id=1)
     repository.delete.return_value = True
 
-    result = await service.delete_manufacturer_device_type(model_dto)
+    result = await service.delete(model_dto)
 
     assert result == [ManufacturerDeviceTypeDTO(id=model_dto.id, manufacturer_id=1, device_type_id=1)]
     repository.delete.assert_called_once_with(id=model_dto.id)
@@ -65,7 +65,7 @@ async def test_update_manufacturer_device_type(service: ManufacturerDeviceTypeSe
                                                                manufacturer_id=model_dto.manufacturer_id,
                                                                device_type_id=model_dto.device_type_id)
 
-    result = await service.update_manufacturer_device_type_id(model_dto)
+    result = await service.update(model_dto)
 
     assert result == [ManufacturerDeviceTypeDTO(id=model_dto.id, manufacturer_id=1, device_type_id=1)]
     repository.update.assert_called_once_with(id=model_dto.id, manufacturer_id=model_dto.manufacturer_id,

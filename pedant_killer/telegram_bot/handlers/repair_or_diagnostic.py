@@ -1,5 +1,3 @@
-import aiohttp
-
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
@@ -8,19 +6,18 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 import logging
 from pydantic import ValidationError
+from dependency_injector.wiring import inject, Provide
 
 from pedant_killer.schemas import DeviceServiceDeviceIdAndListServiceId, OrderStatusPartialDTO
 from pedant_killer.schemas.device_schema import DevicePartialDTO
 from pedant_killer.schemas.common_schema import BaseIdDTO
-from pedant_killer.schemas.service_schema import ServiceIdListDTO, ServicePartialDTO
-from pedant_killer.schemas.breaking_schemas import BreakingPartialDTO
-from pedant_killer.schemas.order_schema import OrderPostDTO
-from pedant_killer.schemas.user_schema import UserPartialDTO
-from pedant_killer.schemas.device_service_schema import DeviceServicePartialDTO
+from pedant_killer.schemas.service_breaking_schema import ServicePartialDTO, BreakingPartialDTO
+from pedant_killer.schemas.order_device_service_user_schema import OrderPostDTO, UserPartialDTO, DeviceServicePartialDTO
 from pedant_killer.schemas.yandex_map_schema import YandexMapGeo, YandexMapAddress
-from pedant_killer.containers import container
-from pedant_killer.telegram_bot.bot_init import bot
-from pedant_killer.telegram_bot.кeyboards.question import (
+from pedant_killer.containers import Container
+from pedant_killer.services import (DeviceService, BreakingService, DeviceServiceService, YandexMapService, UserService,
+                                    OrderStatusService, ServiceService, OrderService, OrderDeviceServiceService)
+from pedant_killer.telegram_bot.keyboards.question import (
     get_users_phone,
     get_city_user,
     get_yes_or_no,
@@ -29,7 +26,7 @@ from pedant_killer.telegram_bot.кeyboards.question import (
     same_and_back,
     back
 )
-from pedant_killer.telegram_bot.кeyboards.device_models import (
+from pedant_killer.telegram_bot.keyboards.device_models import (
     manufacturer_keyboard,
     device_type_keyboard,
     device_keyboard,
@@ -52,16 +49,6 @@ class Repair(StatesGroup):
     number = State()
     location_from = State()
     location_to = State()
-
-
-device_container = container.device_service()
-device_service_container = container.device_service_service()
-breaking_container = container.breaking_service()
-user_container = container.user_service()
-order_container = container.order_service()
-order_status_container = container.order_status_service()
-service_container = container.service_service()
-yandex_map_container = container.yandex_map_service()
 
 
 @router_for_diagnostics.message(StateFilter(None), F.text == 'Нужен ремонт/диагностика устройства')
@@ -213,7 +200,7 @@ async def handle_device_selected(callback: CallbackQuery, state: FSMContext) -> 
 
     else:
         await state.set_state(Repair.defect)
-        msg_breaking = await callback.message.answer('🛠Выберите <b>проблему</b> из списка🛠\n'
+        msg_breaking = await callback.message.answer('🛠Выберите <b>проблему</b> из списка\n'
                                                      'Либо опишите ее, если не нашли подходящую',
                                                      reply_markup=await breaking_keyboard(state=state,
                                                                                           breaking_pages_count=0)
@@ -241,7 +228,9 @@ async def handle_device_exit(callback: CallbackQuery, state: FSMContext) -> None
 
 
 @router_for_diagnostics.message(Repair.model)
-async def handle_model_selection(message: Message, state: FSMContext) -> None:
+@inject
+async def handle_model_selection(message: Message, state: FSMContext,
+                                 device_service: DeviceService = Provide[Container.device_service]) -> None:
     data = await state.get_data()
     msg_model = data.get('msg_model')
     msg_device_name = data.get('msg_device_name')
@@ -265,8 +254,8 @@ async def handle_model_selection(message: Message, state: FSMContext) -> None:
     try:
         introduced_model_dto = DevicePartialDTO(name_model=message.text)
         other_device_model_dto = DevicePartialDTO(name_model='Другое Устройство')
-        device = await device_container.get_device_standardize(model_dto=introduced_model_dto)
-        device_other = await device_container.get_device_standardize(model_dto=other_device_model_dto)
+        device = await device_service.get_standardize(model_dto=introduced_model_dto)
+        device_other = await device_service.get_standardize(model_dto=other_device_model_dto)
         bot_cmd_repair_logger.info(f'{device_other=}')
         if device:
             bot_cmd_repair_logger.info(f'Введенная модель {device[0].name_model} найдена в базе с id: {device}')
@@ -281,7 +270,7 @@ async def handle_model_selection(message: Message, state: FSMContext) -> None:
                                        f' полное название введенное устройства: {message.text}')
 
         await state.set_state(Repair.defect)
-        msg_breaking = await message.answer('🛠️ Выберите <b>проблему</b> из списка 🛠\n'
+        msg_breaking = await message.answer('🛠️ Выберите <b>проблему</b> из списка\n'
                                             'Либо опишите ее, если не нашли подходящую',
                                             reply_markup=await breaking_keyboard(state=state, breaking_pages_count=0))
         await state.update_data(msg_breaking=msg_breaking)
@@ -309,17 +298,21 @@ async def handle_breaking_pages(callback: CallbackQuery, state: FSMContext) -> N
 
 
 @router_for_diagnostics.callback_query(Repair.defect, F.data.startswith('breaking:'))
-async def handle_selected_breaking(callback: CallbackQuery, state: FSMContext) -> None:
+@inject
+async def handle_selected_breaking(callback: CallbackQuery, state: FSMContext,
+                                   breaking_service: BreakingService = Provide[Container.breaking_service],
+                                   device_service_service: DeviceServiceService = Provide[Container.device_service_service]
+                                   ) -> None:
     breaking_id = int(callback.data.split(':')[1])
-    breaking_dto = await breaking_container.get_breaking(BaseIdDTO(id=breaking_id))
+    breaking_dto = await breaking_service.get(BaseIdDTO(id=breaking_id))
     breaking_name = breaking_dto[0].name
     await state.update_data(breaking_id=breaking_id, breaking_name=breaking_name)
     bot_cmd_repair_logger.info(f'В state добавлен {breaking_id=}, {breaking_name=}')
     data = await state.get_data()
 
-    breaking_service_list_dto = await breaking_container.get_relationship_service(BaseIdDTO(id=breaking_id))
-    suitable_service_list = [service.id for service in breaking_service_list_dto[0].service]
-    device_service_list_dto = await device_service_container.get_relationship_service_by_device_id_and_list_service_id(
+    breaking_service_list_dto = await breaking_service.get(BaseIdDTO(id=breaking_id))
+    suitable_service_list = [service.id for service in breaking_service_list_dto[0].services]
+    device_service_list_dto = await device_service_service.get(
         DeviceServiceDeviceIdAndListServiceId(device_id=data['device_id'], service_id=suitable_service_list)
     )
 
@@ -375,23 +368,29 @@ async def handle_exit_breaking(callback: CallbackQuery, state: FSMContext) -> No
 
 
 @router_for_diagnostics.message(Repair.defect)
-async def handle_defect_selection(message: Message, state: FSMContext) -> None:
+@inject
+async def handle_defect_selection(message: Message, state: FSMContext,
+                                  breaking_service: BreakingService = Provide[Container.breaking_service],
+                                  device_service_service: DeviceServiceService = Provide[
+                                      Container.device_service_service
+                                  ]
+                                  ) -> None:
     data = await state.get_data()
     msg_breaking = data.get('msg_breaking')
     defect_name = message.text
-    breaking_dto = await breaking_container.get_breaking_standardize(BreakingPartialDTO(name=defect_name))
-    breaking_dto_other = await breaking_container.get_breaking_standardize(BreakingPartialDTO(name='Другое'))
+    breaking_dto = await breaking_service.get_breaking_standardize(BreakingPartialDTO(name=defect_name))
+    breaking_dto_other = await breaking_service.get_breaking_standardize(BreakingPartialDTO(name='Другое'))
 
     if breaking_dto:
         breaking_id = breaking_dto[0].id
         data['breaking_id'] = breaking_id
         bot_cmd_repair_logger.info(f'В state добавлен {breaking_id=}')
 
-        breaking_service_list_dto = await breaking_container.get_relationship_service(BaseIdDTO(id=breaking_id))
-        suitable_service_list = [service.id for service in breaking_service_list_dto[0].service]
+        breaking_service_list_dto = await breaking_service.get(BaseIdDTO(id=breaking_id))
+        suitable_service_list = [service.id for service in breaking_service_list_dto[0].services]
 
         device_service_list_dto = await (
-            device_service_container.get_relationship_service_by_device_id_and_list_service_id(
+            device_service_service.get(
                 DeviceServiceDeviceIdAndListServiceId(device_id=data['device_id'], service_id=suitable_service_list)
             )
         )
@@ -465,7 +464,7 @@ async def handle_exit_city(callback: CallbackQuery, state: FSMContext) -> None:
         bot_cmd_repair_logger.info('Из state удален breaking_description')
 
     await callback.message.delete()
-    msg_breaking = await callback.message.answer(text='🛠Выберите <b>проблему</b> из списка🛠\n'
+    msg_breaking = await callback.message.answer(text='🛠 Выберите <b>проблему</b> из списка\n'
                                                  'Либо опишите ее, если не нашли подходящую',
                                                  reply_markup=await breaking_keyboard(state=state,
                                                                                       breaking_pages_count=0)
@@ -696,7 +695,9 @@ async def handle_callback_number_back(callback: CallbackQuery, state: FSMContext
 
 
 @router_for_diagnostics.message(Repair.location_from, F.location)
-async def handle_location_to(message: Message, state: FSMContext) -> None:
+@inject
+async def handle_location_to(message: Message, state: FSMContext,
+                             yandex_map_service: YandexMapService = Provide[Container.yandex_map_service]) -> None:
     data = await state.get_data()
     msg_address_1 = data.get('msg_address_1')
     msg_address_2 = data.get('msg_address_2')
@@ -718,7 +719,7 @@ async def handle_location_to(message: Message, state: FSMContext) -> None:
     lat = location.latitude
     lon = location.longitude
     bot_cmd_repair_logger.info(f'Получены координаты пользователя {lat=}, {lon=}')
-    address_dto = await yandex_map_container.get_address_by_coords(YandexMapGeo(lat=lat, lon=lon))
+    address_dto = await yandex_map_service.get_address_by_coords(YandexMapGeo(lat=lat, lon=lon))
 
     msg_location_from = await message.answer(
         text='🏠 Введите адрес, куда доставить: <b>Улица Дом </b>',
@@ -733,7 +734,9 @@ async def handle_location_to(message: Message, state: FSMContext) -> None:
 
 
 @router_for_diagnostics.message(Repair.location_from)
-async def handle_location_to(message: Message, state: FSMContext) -> None:
+@inject
+async def handle_location_to(message: Message, state: FSMContext,
+                             yandex_map_service: YandexMapService = Provide[Container.yandex_map_service]) -> None:
     data = await state.get_data()
     msg_address_1 = data.get('msg_address_1')
     msg_address_2 = data.get('msg_address_2')
@@ -752,7 +755,7 @@ async def handle_location_to(message: Message, state: FSMContext) -> None:
         del data['msg_address_2']
         bot_cmd_repair_logger.info('Удалены сообщения с получением адреса')
 
-    if await yandex_map_container.validate_address(YandexMapAddress(address=f'{city} {message.text}')):
+    if await yandex_map_service.validate_address(YandexMapAddress(address=f'{city} {message.text}')):
         msg_location_from = await message.answer(
             text='🏠 Введите адрес, куда доставить: <b>Улица Дом </b>',
             reply_markup=same_and_back()
@@ -802,15 +805,28 @@ async def handle_callback_location_to_back(callback: CallbackQuery, state: FSMCo
 
 
 @router_for_diagnostics.callback_query(Repair.location_to, F.data == 'same')
-async def handle_callback_location_from_same(callback: CallbackQuery, state: FSMContext) -> None:
+@inject
+async def handle_callback_location_from_same(callback: CallbackQuery, state: FSMContext,
+                                             user_service: UserService = Provide[Container.user_service],
+                                             order_status_service: OrderStatusService = Provide[
+                                                 Container.order_status_service
+                                             ],
+                                             service_service: ServiceService = Provide[Container.service_service],
+                                             device_service_service: DeviceServiceService = Provide[
+                                                 Container.device_service_service
+                                             ],
+                                             order_service: OrderService = Provide[Container.order_service],
+                                             order_device_service_service: OrderDeviceServiceService = Provide[
+                                                 Container.order_device_service_service
+                                             ]) -> None:
     data = await state.get_data()
     location_second = data.get('location_first')
     await callback.message.delete()
-    user_dto = await user_container.get_user(UserPartialDTO(telegram_id=callback.from_user.id))
+    user_dto = await user_service.get(UserPartialDTO(telegram_id=callback.from_user.id))
     user_id = user_dto[0].id
     user_full_name = user_dto[0].full_name
 
-    order_status_dto = await order_status_container.get_order_status(OrderStatusPartialDTO(name='Новый'))
+    order_status_dto = await order_status_service.get(OrderStatusPartialDTO(name='Новый'))
     order_status_id = order_status_dto[0].id
 
     city = data.get('city')
@@ -822,14 +838,14 @@ async def handle_callback_location_from_same(callback: CallbackQuery, state: FSM
     device_name = data.get('device_name')
     device_description = data.get('device_description')
     device_id = data.get('device_id')
-    service_dto = await service_container.get_service(ServicePartialDTO(name='Диагностика'))
+    service_dto = await service_service.get(ServicePartialDTO(name='Диагностика'))
     service_id = service_dto[0].id
-    device_service_dto = await device_service_container.get_device_service(DeviceServicePartialDTO(device_id=device_id,
-                                                                                                   service_id=service_id))
+    device_service_dto = await device_service_service.get(DeviceServicePartialDTO(device_id=device_id,
+                                                                                  service_id=service_id))
     device_service_id = device_service_dto[0].id
     number = data.get('number')
 
-    await user_container.update_user(UserPartialDTO(id=user_id, phone=number, address=sent_from_address))
+    await user_service.update(UserPartialDTO(id=user_id, phone=number, address=sent_from_address))
 
     order_dto = OrderPostDTO(
         client_id=user_id,
@@ -840,10 +856,10 @@ async def handle_callback_location_from_same(callback: CallbackQuery, state: FSM
         breaking_id=breaking_id,
         description_breaking=breaking_description
     )
-    order_dto = await order_container.save_order(order_dto)
+    order_dto = await order_service.save(order_dto)
     order_id = order_dto[0].id
-    await order_container.save_relationship_order_device_service(order_id=BaseIdDTO(id=order_id),
-                                                                 device_service_id=BaseIdDTO(id=device_service_id))
+    await order_device_service_service.save(order_id_dto=BaseIdDTO(id=order_id),
+                                            device_service_id_dto=BaseIdDTO(id=device_service_id))
 
     await callback.message.answer(
         text=f'🎉 <b>{user_full_name}</b>, Ваш заказ создан.\n\n'
@@ -886,7 +902,21 @@ async def handle_callback_location_from_back(callback: CallbackQuery, state: FSM
 
 
 @router_for_diagnostics.message(Repair.location_to)
-async def handle_location_from(message: Message, state: FSMContext) -> None:
+@inject
+async def handle_location_from(message: Message, state: FSMContext,
+                               yandex_map_service: YandexMapService = Provide[Container.yandex_map_service],
+                               user_service: UserService = Provide[Container.user_service],
+                               order_status_service: OrderStatusService = Provide[
+                                   Container.order_status_service
+                               ],
+                               service_service: ServiceService = Provide[Container.service_service],
+                               device_service_service: DeviceServiceService = Provide[
+                                   Container.device_service_service
+                               ],
+                               order_service: OrderService = Provide[Container.order_service],
+                               order_device_service_service: OrderDeviceServiceService = Provide[
+                                   Container.order_device_service_service
+                               ]) -> None:
     data = await state.get_data()
 
     msg_location_from = data.get('msg_location_from')
@@ -901,12 +931,12 @@ async def handle_location_from(message: Message, state: FSMContext) -> None:
         await msg_incorrect_address.delete()
         del data['msg_incorrect_address']
 
-    if await yandex_map_container.validate_address(YandexMapAddress(address=f'{city} {message.text}')):
-        user_dto = await user_container.get_user(UserPartialDTO(telegram_id=message.from_user.id))
+    if await yandex_map_service.validate_address(YandexMapAddress(address=f'{city} {message.text}')):
+        user_dto = await user_service.get(UserPartialDTO(telegram_id=message.from_user.id))
         user_id = user_dto[0].id
         user_full_name = user_dto[0].full_name
 
-        order_status_dto = await order_status_container.get_order_status(OrderStatusPartialDTO(name='Новый'))
+        order_status_dto = await order_status_service.get(OrderStatusPartialDTO(name='Новый'))
         order_status_id = order_status_dto[0].id
 
         sent_from_address = data.get('location_first')
@@ -917,16 +947,16 @@ async def handle_location_from(message: Message, state: FSMContext) -> None:
         device_name = data.get('device_name')
         device_description = data.get('device_description')
         device_id = data.get('device_id')
-        service_dto = await service_container.get_service(ServicePartialDTO(name='Диагностика'))
+        service_dto = await service_service.get(ServicePartialDTO(name='Диагностика'))
         service_id = service_dto[0].id
-        device_service_dto = await device_service_container.get_device_service(DeviceServicePartialDTO(
+        device_service_dto = await device_service_service.get(DeviceServicePartialDTO(
             device_id=device_id,
             service_id=service_id))
 
         device_service_id = device_service_dto[0].id
         number = data.get('number')
 
-        await user_container.update_user(UserPartialDTO(id=user_id, phone=number, address=sent_from_address))
+        await user_service.update(UserPartialDTO(id=user_id, phone=number, address=sent_from_address))
 
         order_dto = OrderPostDTO(
             client_id=user_id,
@@ -937,10 +967,10 @@ async def handle_location_from(message: Message, state: FSMContext) -> None:
             breaking_id=breaking_id,
             description_breaking=breaking_description
         )
-        order_dto = await order_container.save_order(order_dto)
+        order_dto = await order_service.save(order_dto)
         order_id = order_dto[0].id
-        await order_container.save_relationship_order_device_service(order_id=BaseIdDTO(id=order_id),
-                                                                     device_service_id=BaseIdDTO(id=device_service_id))
+        await order_device_service_service.save(order_id_dto=BaseIdDTO(id=order_id),
+                                                device_service_id_dto=BaseIdDTO(id=device_service_id))
 
         await message.answer(
             text=f'🎉 <b>{user_full_name}</b>, Ваш заказ создан.\n\n'

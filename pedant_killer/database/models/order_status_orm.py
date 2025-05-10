@@ -14,7 +14,3 @@ class OrderStatusOrm(Base):
     name: Mapped[str]
     description: Mapped[str | None] = mapped_column(default=None)
 
-    order: Mapped['OrderOrm'] = relationship(
-        back_populates='status',
-        foreign_keys='OrderOrm.status_id'
-    )

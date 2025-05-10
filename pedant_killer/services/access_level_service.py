@@ -1,16 +1,13 @@
-from typing import TYPE_CHECKING
-
 from pedant_killer.schemas.access_level_schema import (AccessLevelPostDTO,
                                                        AccessLevelDTO, AccessLevelPartialDTO, BaseIdDTO)
-if TYPE_CHECKING:
-    from pedant_killer.database.repository.access_level_repository import AccessLevelRepository
+from pedant_killer.database.repository.access_level_repository import AccessLevelRepository
 
 
 class AccessLevelService:
     def __init__(self, repository: 'AccessLevelRepository'):
         self._repository = repository
 
-    async def save_access_level(self, model_dto: AccessLevelPostDTO) -> list[BaseIdDTO] | None:
+    async def save(self, model_dto: AccessLevelPostDTO) -> list[BaseIdDTO] | None:
         result_orm = await self._repository.save(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -18,7 +15,7 @@ class AccessLevelService:
 
         return None
 
-    async def get_access_level(self, model_dto: AccessLevelPartialDTO | BaseIdDTO) -> list[AccessLevelDTO] | None:
+    async def get(self, model_dto: AccessLevelPartialDTO | BaseIdDTO) -> list[AccessLevelDTO] | None:
         result_orm = await self._repository.get(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:
@@ -26,7 +23,7 @@ class AccessLevelService:
 
         return None
 
-    async def get_all_access_level(self) -> list[AccessLevelDTO] | None:
+    async def get_all(self) -> list[AccessLevelDTO] | None:
         result_orm = await self._repository.get()
 
         if result_orm:
@@ -34,8 +31,8 @@ class AccessLevelService:
 
         return None
 
-    async def delete_access_level(self, model_dto: BaseIdDTO) -> list[AccessLevelDTO] | None:
-        result_dto = await self.get_access_level(model_dto)
+    async def delete(self, model_dto: BaseIdDTO) -> list[AccessLevelDTO] | None:
+        result_dto = await self.get(model_dto)
 
         if result_dto:
             delete_result = await self._repository.delete(id=model_dto.id)
@@ -45,7 +42,7 @@ class AccessLevelService:
 
         return None
 
-    async def update_access_level(self, model_dto: AccessLevelPartialDTO) -> list[AccessLevelDTO] | None:
+    async def update(self, model_dto: AccessLevelPartialDTO) -> list[AccessLevelDTO] | None:
         result_orm = await self._repository.update(**model_dto.model_dump(exclude_none=True))
 
         if result_orm:

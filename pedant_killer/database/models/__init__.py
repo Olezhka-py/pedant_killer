@@ -11,4 +11,4 @@ from pedant_killer.database.models.service_orm import ServiceOrm
 from pedant_killer.database.models.user_orm import UserOrm
 import pedant_killer.database.models.annotated
 from pedant_killer.database.models.breaking_orm import BreakingOrm
-from pedant_killer.database.models.service_breaking import ServiceBreakingOrm
+from pedant_killer.database.models.service_breaking_orm import ServiceBreakingOrm

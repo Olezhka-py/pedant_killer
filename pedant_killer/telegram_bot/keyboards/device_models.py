@@ -1,30 +1,37 @@
 import logging
-from itertools import chain
-from collections import Counter
-import asyncio
 
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from dependency_injector.wiring import inject, Provide
 
-from pedant_killer.containers import container
+from pedant_killer.containers import Container
+
 from pedant_killer.schemas.manufacturer_device_type_schema import ManufacturerDeviceTypePartialDTO
 from pedant_killer.schemas.device_schema import DevicePartialDTO
-from pedant_killer.schemas.device_service_schema import DeviceServicePartialDTO
-from pedant_killer.schemas.service_schema import ServiceIdListDTO
+from pedant_killer.schemas.order_device_service_user_schema import DeviceServicePartialDTO
+from pedant_killer.schemas.service_breaking_schema import ServiceIdListDTO
+from pedant_killer.services.manufacturer_service import ManufacturerService
+from pedant_killer.services.device_type_service import DeviceTypeService
+from pedant_killer.services.manufacturer_device_type_service import ManufacturerDeviceTypeService
+from pedant_killer.services.device_service import DeviceService
+from pedant_killer.services.device_service_service import DeviceServiceService
+from pedant_killer.services.service_service import ServiceService
 
 bot_keyboard_device_model_logger = logging.getLogger('bot_keyboard_device_model_logger')
 
 
-async def manufacturer_keyboard(state: FSMContext, manufacturer_pages_count: int = 0) -> InlineKeyboardMarkup:
+@inject
+async def manufacturer_keyboard(state: FSMContext, manufacturer_pages_count: int = 0,
+                                manufacturer_service: ManufacturerService = Provide[Container.manufacturer_service]
+                                ) -> InlineKeyboardMarkup:
     models_per_page = 5
 
     data = await state.get_data()
     manufacturer_list = data.get('manufacturer_list')
 
     if not manufacturer_list:
-        manufacturer_service = container.manufacturer_service()
-        manufacturer_dto = await manufacturer_service.get_all_manufacturer()
+        manufacturer_dto = await manufacturer_service.get_all()
         manufacturer_list = [row.model_dump() for row in manufacturer_dto]
         await state.update_data(manufacturer_list=manufacturer_list)
         bot_keyboard_device_model_logger.info(f'В state добавлено {manufacturer_list=}')
@@ -55,15 +62,17 @@ async def manufacturer_keyboard(state: FSMContext, manufacturer_pages_count: int
     return manufacturer_kb.as_markup()
 
 
-async def device_type_keyboard(state: FSMContext, device_type_pages_count: int = 0) -> InlineKeyboardMarkup:
+@inject
+async def device_type_keyboard(state: FSMContext, device_type_pages_count: int = 0,
+                               device_type_service: DeviceTypeService = Provide[Container.device_type_service]
+                               ) -> InlineKeyboardMarkup:
     device_type_per_page = 5
 
     data = await state.get_data()
     device_type_list = data.get('device_type_list')
 
     if not device_type_list:
-        device_type = container.device_type_service()
-        device_type_dto = await device_type.get_all_device_type()
+        device_type_dto = await device_type_service.get_all()
         device_type_list = [row.model_dump() for row in device_type_dto]
         await state.update_data(device_type_list=device_type_list)
         bot_keyboard_device_model_logger.info(f'В state добавлен {device_type_list=}')
@@ -94,7 +103,13 @@ async def device_type_keyboard(state: FSMContext, device_type_pages_count: int =
     return device_type_kb.as_markup()
 
 
-async def device_keyboard(state: FSMContext, device_pages_count: int = 0) -> InlineKeyboardMarkup:
+@inject
+async def device_keyboard(state: FSMContext, device_pages_count: int = 0,
+                          manufacturer_device_type_service: ManufacturerDeviceTypeService = Provide[
+                              Container.manufacturer_device_type_service
+                          ],
+                          device_service: DeviceService = Provide[Container.device_service]
+                          ) -> InlineKeyboardMarkup:
     device_per_page = 5
 
     data = await state.get_data()
@@ -104,16 +119,14 @@ async def device_keyboard(state: FSMContext, device_pages_count: int = 0) -> Inl
         manufacturer = data.get('manufacturer')
         device_type = data.get('device_type')
 
-        manufacturer_device_type = container.manufacturer_device_type_service()
-        device = container.device_service()
         manufacturer_device_type_dto = ManufacturerDeviceTypePartialDTO(manufacturer_id=manufacturer,
                                                                         device_type_id=device_type
         )
-        manufacturer_device_type_res = await manufacturer_device_type.get_manufacturer_device_type(
+        manufacturer_device_type_res = await manufacturer_device_type_service.get(
             model_dto=manufacturer_device_type_dto
         )
         device_dto = DevicePartialDTO(manufacturer_device_type_id=manufacturer_device_type_res[0].id)
-        device_res = await device.get_device(model_dto=device_dto)
+        device_res = await device_service.get(model_dto=device_dto)
         device_list = [row.model_dump() for row in device_res]
         await state.update_data(device_list=device_list)
         bot_keyboard_device_model_logger.info(f'В state добавлен {device_list=}')
@@ -144,15 +157,18 @@ async def device_keyboard(state: FSMContext, device_pages_count: int = 0) -> Inl
     return device_type_kb.as_markup()
 
 
-async def breaking_keyboard(state: FSMContext, breaking_pages_count: int = 0) -> InlineKeyboardMarkup:
+@inject
+async def breaking_keyboard(state: FSMContext, breaking_pages_count: int = 0,
+                            device_service_service: DeviceServiceService = Provide[Container.device_service_service],
+                            service_service: ServiceService = Provide[Container.service_service]
+                            ) -> InlineKeyboardMarkup:
     breaking_per_page = 5
     data = await state.get_data()
     breaking_list = data.get('breaking_list')
 
     if not breaking_list:
         device_id = data.get('device_id')
-        device_service = container.device_service_service()
-        device_service_list = await device_service.get_relationship_service(
+        device_service_list = await device_service_service.get(
             DeviceServicePartialDTO(device_id=device_id)
         )
 
@@ -162,20 +178,18 @@ async def breaking_keyboard(state: FSMContext, breaking_pages_count: int = 0) ->
         ]
 
         bot_keyboard_device_model_logger.info(f'{type(service_id_list[0])}{service_id_list=}')
-        service = container.service_service()
 
-        service_breaking_dto_list = await service.get_relationship_breaking(
-            ServiceIdListDTO(service_id=service_id_list)
+        service_breaking_dto_list = await service_service.get(
+            ServiceIdListDTO(id=service_id_list)
         )
         breaking_list = list(
             {
                 (res.id, res.name)
                 for breaking_list in service_breaking_dto_list
-                for res in breaking_list.breaking
+                for res in breaking_list.breakings
             }
         )
         breaking_list = sorted(breaking_list, key=lambda x: x[0])
-
 
         await state.update_data(breaking_list=breaking_list)
         bot_keyboard_device_model_logger.info(f'В state добавлен {breaking_list=}')

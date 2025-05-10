@@ -5,9 +5,9 @@ from sqlalchemy import ForeignKey
 
 from pedant_killer.database.database import Base
 from pedant_killer.database.models.annotated import intpk
+from pedant_killer.database.models.device_orm import DeviceOrm
+from pedant_killer.database.models.service_orm import ServiceOrm
 if TYPE_CHECKING:
-    from pedant_killer.database.models.device_orm import DeviceOrm
-    from pedant_killer.database.models.service_orm import ServiceOrm
     from pedant_killer.database.models.order_orm import OrderOrm
 
 
@@ -23,7 +23,7 @@ class DeviceServiceOrm(Base):
     device: Mapped['DeviceOrm'] = relationship()
     service: Mapped['ServiceOrm'] = relationship()
 
-    order: Mapped[list['OrderOrm']] = relationship(
+    orders: Mapped[list['OrderOrm']] = relationship(
         secondary='order_device_service',
         back_populates='device_service'
     )

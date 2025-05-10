@@ -1,7 +1,7 @@
 from pydantic import Field
 
 from pedant_killer.schemas.common_schema import CoreModel, BaseIdDTO, optional
-from pedant_killer.schemas.manufacturer_device_type_schema import ManufacturerDeviceTypeRelDTO
+from pedant_killer.schemas.manufacturer_device_type_schema import ManufacturerDeviceTypeDTO
 
 
 class DevicePostDTO(CoreModel):
@@ -10,13 +10,9 @@ class DevicePostDTO(CoreModel):
 
 
 class DeviceDTO(BaseIdDTO, DevicePostDTO):
-    pass
+    manufacturer_device_type: ManufacturerDeviceTypeDTO
 
 
 @optional()
 class DevicePartialDTO(DeviceDTO):
     pass
-
-
-class DeviceManufacturerDeviceTypeRelDTO(DeviceDTO):
-    manufacturer_device_type: ManufacturerDeviceTypeRelDTO | None

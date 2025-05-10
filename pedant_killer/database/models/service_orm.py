@@ -1,9 +1,10 @@
-# from __future__ import annotations
 from typing import TYPE_CHECKING
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from pedant_killer.database.models.annotated import intpk
 from pedant_killer.database.database import Base
+
 if TYPE_CHECKING:
     from pedant_killer.database.models.breaking_orm import BreakingOrm
 
@@ -14,4 +15,4 @@ class ServiceOrm(Base):
     name: Mapped[str]
     description: Mapped[str | None] = mapped_column(default=None)
 
-    breaking: Mapped[list['BreakingOrm']] = relationship(secondary='service_breaking', back_populates='service')
+    breakings: Mapped[list['BreakingOrm']] = relationship(secondary='service_breaking', back_populates='services')

@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from pedant_killer.database.models.user_orm import UserOrm
     from pedant_killer.database.models.order_status_orm import OrderStatusOrm
     from pedant_killer.database.models.device_service_orm import DeviceServiceOrm
+    from pedant_killer.database.models.breaking_orm import BreakingOrm
 
 
 class OrderOrm(Base):
@@ -37,12 +38,11 @@ class OrderOrm(Base):
         foreign_keys=[master_id]
     )
 
-    status: Mapped['OrderStatusOrm'] = relationship(
-        back_populates='order',
-        foreign_keys=[status_id]
+    status: Mapped['OrderStatusOrm'] = relationship(foreign_keys=[status_id])
+
+    device_service: Mapped['DeviceServiceOrm'] = relationship(
+        secondary='order_device_service',
+        back_populates='orders'
     )
 
-    device_service: Mapped[list['DeviceServiceOrm']] = relationship(
-        secondary='order_device_service',
-        back_populates='order'
-    )
+    breaking: Mapped['BreakingOrm'] = relationship(foreign_keys=[breaking_id])

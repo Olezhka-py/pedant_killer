@@ -27,12 +27,19 @@ class ObjectExistsByRowsSpecification(Specification):
 
     @classmethod
     async def is_satisfied(cls, model, rows: dict[str, Any]) -> BinaryExpression | None:
-        if rows:
-            conditions = [getattr(model, key) == value for key, value in rows.items()]
+        if not rows:
+            return and_()
 
-            return and_(*conditions)
+        conditions = []
+        for key, value in rows.items():
+            column = getattr(model, key)
 
-        return and_()
+            if isinstance(value, (list, tuple, set)) and not isinstance(value, str):
+                conditions.append(column.in_(value))
+            else:
+                conditions.append(column == value)
+
+        return and_(*conditions)
 
 
 class OrderByRowsDefaultSpecification(Specification):
@@ -58,11 +65,3 @@ class DeleteSpaceAndLowerCaseSpecification(Specification):
 
         return and_(*conditions) if conditions else and_()
 
-
-class IdInListSpecification(Specification):
-    @classmethod
-    async def is_satisfied(cls, model, rows: dict[str, int | list[int]]) -> BinaryExpression:
-        return and_(
-            model.device_id == rows['device_id'],
-            model.service_id.in_(rows['service_id'])
-        )

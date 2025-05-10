@@ -24,7 +24,7 @@ def service(repository) -> DeviceServiceService:
 async def test_save_device(service: DeviceServiceService, repository: AsyncMock) -> None:
     model_dto = DeviceServicePostDTO(device_id=1, service_id=1, price=100, work_duration=10)
     repository.save.return_value = 1
-    result = await service.save_device_service(model_dto)
+    result = await service.save(model_dto)
 
     assert result == [BaseIdDTO(id=1)]
     repository.save.assert_called_once_with(device_id=model_dto.device_id,
@@ -54,7 +54,7 @@ async def test_get_device_service(service: DeviceServiceService, repository: Asy
                                                    price=100,
                                                    work_duration=10)
 
-    result = await service.get_device_service(model_dto)
+    result = await service.get(model_dto)
 
     assert result == [DeviceServiceDTO(id=model_dto.id, device_id=1, service_id=1, price=100, work_duration=10)]
     repository.get.assert_called_once_with(id=model_dto.id)
@@ -63,7 +63,7 @@ async def test_get_device_service(service: DeviceServiceService, repository: Asy
 async def test_get_all_device_service(service: DeviceServiceService, repository: AsyncMock) -> None:
     repository.get.return_value = [DeviceServiceOrm(id=1, device_id=1, service_id=1, price=100, work_duration=10)]
 
-    result = await service.get_all_device_service()
+    result = await service.get_all()
 
     assert result == [DeviceServiceDTO(id=1, device_id=1, service_id=1, price=100, work_duration=10)]
     repository.get.assert_called_once_with()
@@ -212,7 +212,7 @@ async def test_delete_device(service: DeviceServiceService, repository: AsyncMoc
     repository.get.return_value = DeviceServiceOrm(id=1, device_id=1, service_id=1, price=100, work_duration=10)
     repository.delete.return_value = True
 
-    result = await service.delete_device_service(model_dto)
+    result = await service.delete(model_dto)
 
     assert result == [DeviceServiceDTO(id=1, device_id=1, service_id=1, price=100, work_duration=10)]
     repository.get.assert_called_once_with(id=model_dto.id)
@@ -223,7 +223,7 @@ async def test_update_device(service: DeviceServiceService, repository: AsyncMoc
     model_dto = DeviceServicePartialDTO(id=1, device_id=1, service_id=1, price=100, work_duration=10)
     repository.update.return_value = DeviceServiceOrm(id=1, device_id=1, service_id=1, price=100, work_duration=10)
 
-    result = await service.update_device_service(model_dto)
+    result = await service.update(model_dto)
 
     assert result == [DeviceServiceDTO(id=1, device_id=1, service_id=1, price=100, work_duration=10)]
     repository.update.assert_called_once_with(id=1, device_id=1, service_id=1, price=100, work_duration=10)

@@ -1,4 +1,4 @@
-import asyncio
+from typing import Any, Sequence
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -9,138 +9,33 @@ from pedant_killer.database.repository.core_repository import CoreRepository
 from pedant_killer.database.database import database_logger
 from pedant_killer.database.models.device_service_orm import DeviceServiceOrm
 from pedant_killer.database.models.order_orm import OrderOrm
+from pedant_killer.database.specification import Specification, ObjectExistsByRowsSpecification, \
+    OrderByRowsDefaultSpecification
 
 
 class OrderRepository(CoreRepository[OrderOrm]):
     def __init__(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
         super().__init__(session_factory=session_factory, model_orm=OrderOrm)
 
-    async def save_order_device_service(self, order_id: int, device_service_id: int) -> int | None:
-        try:
-            async with self._session_factory() as session:
-                stmt_order = (select(self._model_orm)
-                              .options(joinedload(self._model_orm.device_service))
-                              .filter_by(id=order_id))
-                stmt_device_service = (select(DeviceServiceOrm)
-                                       .options(joinedload(DeviceServiceOrm.order))
-                                       .filter_by(id=device_service_id))
-
-            order = await session.execute(stmt_order)
-            device_service = await session.execute(stmt_device_service)
-
-            order_result = order.scalars().first()
-            device_service_result = device_service.scalars().first()
-            order_result.device_service.append(device_service_result)
-            await session.commit()
-            await session.refresh(order_result)
-            return order_result.id
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при создании связи между таблицами order и device_service: {e}')
-
-            return None
-
-    async def get_order_device_service(self, instance_id: int) -> 'OrderOrm | None':
-
+    async def get(self, specification_filter: type[Specification] = ObjectExistsByRowsSpecification,
+                  specification_sort: type[Specification] = OrderByRowsDefaultSpecification,
+                  **rows: dict[str, Any]) -> Sequence[OrderOrm] | None:
         try:
             async with self._session_factory() as session:
                 stmt = (select(self._model_orm)
-                        .options(selectinload(self._model_orm.device_service))
-                        .filter_by(id=instance_id))
-
-                instance = await session.execute(stmt)
-                result = instance.scalars().first()
-
-                return result
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении device_service через relationship'
-                                  f'из таблицы:{self._model_orm}'
-                                  f'по id:{instance_id}: {e}')
-
-            return None
-
-    async def get_client(self, instance_id: int) -> 'OrderOrm | None':
-
-        try:
-            async with self._session_factory() as session:
-                stmt = (select(self._model_orm)
-                        .options(joinedload(self._model_orm.user_client),
-                                 joinedload(self._model_orm.user_master)
+                        .options(joinedload(self._model_orm.device_service),
+                                 joinedload(self._model_orm.user_client),
+                                 joinedload(self._model_orm.user_master),
+                                 joinedload(self._model_orm.status),
+                                 joinedload(self._model_orm.breaking)
                                  )
-                        .filter_by(id=instance_id))
-
+                        .where(await specification_filter.is_satisfied(self._model_orm, rows))
+                        .order_by(await specification_sort.is_satisfied(self._model_orm, rows)))
                 instance = await session.execute(stmt)
-                result = instance.scalars().first()
-
+                result = instance.scalars().all()
+                database_logger.info(f'Данные из таблицы {self._model_orm} по {rows=} получены')
                 return result
 
         except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении заказов через relationship'
-                                  f'из таблицы:{self._model_orm}'
-                                  f'по id:{instance_id}: {e}')
-
-            return None
-
-    async def get_master(self, instance_id: int) -> 'OrderOrm | None':
-
-        try:
-            async with self._session_factory() as session:
-                stmt = (select(self._model_orm)
-                        .options(joinedload(self._model_orm.user_client),
-                                 joinedload(self._model_orm.user_master)
-                                 )
-                        .filter_by(id=instance_id)
-                        )
-
-                instance = await session.execute(stmt)
-                result = instance.scalars().first()
-
-                return result
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении заказов через relationship'
-                                  f'из таблицы:{self._model_orm}'
-                                  f'по id:{instance_id}: {e}')
-
-            return None
-
-    async def get_status(self, instance_id: int) -> 'OrderOrm | None':
-        try:
-            async with self._session_factory() as session:
-                stmt = (select(self._model_orm)
-                        .options(joinedload(self._model_orm.status))
-                        .filter_by(id=instance_id)
-                        )
-
-                instance = await session.execute(stmt)
-                result = instance.scalars().first()
-
-                return result
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении статуса заказа через relationship'
-                                  f'из таблицы:{self._model_orm}'
-                                  f'по id:{instance_id}: {e}')
-
-            return None
-
-    async def get_device_service(self, instance_id: int) -> 'OrderOrm | None':
-        try:
-            async with self._session_factory() as session:
-                stmt = (select(self._model_orm)
-                        .options(joinedload(self._model_orm.device_service))
-                        .filter_by(id=instance_id)
-                        )
-
-                instance = await session.execute(stmt)
-                result = instance.scalars().first()
-
-                return result
-
-        except SQLAlchemyError as e:
-            database_logger.error(f'Ошибка при получении устройства и услуги через relationship'
-                                  f'из таблицы:{self._model_orm}'
-                                  f'по id:{instance_id}: {e}')
-
+            database_logger.error(f'Ошибка при получении данных из таблицы {self._model_orm} по {rows=}: {e}')
             return None
