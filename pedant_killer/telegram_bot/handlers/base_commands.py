@@ -56,12 +56,12 @@ async def handler_agree(callback: CallbackQuery, state: FSMContext,
     await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.edit_text("✅ Вы успешно приняли соглашение. Добро пожаловать!")
     bot_cmd_start_logger.info(f'Соглашение об обработке персональных данных принято клиентом {callback.from_user.id}')
-    first_name = callback.message.from_user.first_name if callback.message.from_user.first_name is not None else ''
-    last_name = callback.message.from_user.last_name if callback.message.from_user.last_name is not None else ''
+    first_name = callback.from_user.first_name if callback.from_user.first_name is not None else ''
+    last_name = callback.from_user.last_name if callback.from_user.last_name is not None else ''
     try:
         user_dto = UserPostDTO(access_level_id=1,
-                               telegram_username=callback.message.from_user.username,
-                               telegram_id=callback.message.from_user.id,
+                               telegram_username=callback.from_user.username,
+                               telegram_id=callback.from_user.id,
                                full_name=f'{first_name} {last_name}'.strip(),
                                )
 
@@ -71,8 +71,7 @@ async def handler_agree(callback: CallbackQuery, state: FSMContext,
             await state.update_data(user_id=user_id)
 
             message_hello = await callback.message.answer(
-                f'<b>Здравствуйте!</b> {callback.from_user.first_name if callback.from_user.first_name is not None else ''}'
-                f' {callback.from_user.last_name if callback.from_user.last_name is not None else ''},'
+                text=f'<b>Здравствуйте!</b> {first_name} {last_name},\n'
                 f'Меня зовут <b>{choice(["Александр", "Олег"])}</b> 🧑‍💼\n\n'
                 f'✅ Давайте я Вас проконсультирую\n\n'
                 f'Нажмите нужную кнопку, чтобы получить быстрый ответ 👇',

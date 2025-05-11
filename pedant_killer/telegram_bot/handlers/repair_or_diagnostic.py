@@ -8,15 +8,27 @@ import logging
 from pydantic import ValidationError
 from dependency_injector.wiring import inject, Provide
 
-from pedant_killer.schemas import DeviceServiceDeviceIdAndListServiceId, OrderStatusPartialDTO
+from pedant_killer.schemas.order_device_service_user_schema import DeviceServiceDeviceIdAndListServiceId
+from pedant_killer.schemas.order_status_schema import OrderStatusPartialDTO
+from pedant_killer.schemas.manufacturer_device_type_schema import ManufacturerDeviceTypePartialDTO
 from pedant_killer.schemas.device_schema import DevicePartialDTO
 from pedant_killer.schemas.common_schema import BaseIdDTO
-from pedant_killer.schemas.service_breaking_schema import ServicePartialDTO, BreakingPartialDTO
+from pedant_killer.schemas.service_breaking_schema import ServicePartialDTO, BreakingPartialDTO, ServiceIdListDTO
 from pedant_killer.schemas.order_device_service_user_schema import OrderPostDTO, UserPartialDTO, DeviceServicePartialDTO
 from pedant_killer.schemas.yandex_map_schema import YandexMapGeo, YandexMapAddress
 from pedant_killer.containers import Container
-from pedant_killer.services import (DeviceService, BreakingService, DeviceServiceService, YandexMapService, UserService,
-                                    OrderStatusService, ServiceService, OrderService, OrderDeviceServiceService)
+from pedant_killer.services.device_service import DeviceService
+from pedant_killer.services.breaking_service import BreakingService
+from pedant_killer.services.device_service_service import DeviceServiceService
+from pedant_killer.services.yandex_map_service import YandexMapService
+from pedant_killer.services.user_service import UserService
+from pedant_killer.services.order_status_service import OrderStatusService
+from pedant_killer.services.service_service import ServiceService
+from pedant_killer.services.order_service import OrderService
+from pedant_killer.services.order_device_service_service import OrderDeviceServiceService
+from pedant_killer.services.manufacturer_service import ManufacturerService
+from pedant_killer.services.device_type_service import DeviceTypeService
+from pedant_killer.services.manufacturer_device_type_service import ManufacturerDeviceTypeService
 from pedant_killer.telegram_bot.keyboards.question import (
     get_users_phone,
     get_city_user,
@@ -51,8 +63,15 @@ class Repair(StatesGroup):
     location_to = State()
 
 
-@router_for_diagnostics.message(StateFilter(None), F.text == 'Нужен ремонт/диагностика устройства')
-async def handle_diagnostic_start_handler(message: Message, state: FSMContext) -> None:
+page_size = 5
+
+
+@router_for_diagnostics.message(StateFilter(None), F.text == 'Нужен ремонт/диагностика устройства', )
+@inject
+async def handle_diagnostic_start_handler(message: Message, state: FSMContext,
+                                          manufacturer_service: ManufacturerService = Provide[
+                                              Container.manufacturer_service
+                                          ]) -> None:
     await state.set_state(Repair.model)
     data = await state.get_data()
     message_hello = data.get('message_hello')
@@ -60,26 +79,46 @@ async def handle_diagnostic_start_handler(message: Message, state: FSMContext) -
     if message_hello:
         await message_hello.delete()
         del data['message_hello']
-        await state.set_data(data)
         bot_cmd_repair_logger.info('Удалено сообщение-знакомство')
         bot_cmd_repair_logger.info('Из state удалено сообщение-знакомство')
+
+    manufacturer_dto = await manufacturer_service.get_all()
+    manufacturer_list = [row.model_dump() for row in manufacturer_dto]
+    data['manufacturer_list'] = manufacturer_list
+    bot_cmd_repair_logger.info(f'В state добавлен список производителей {manufacturer_list=}')
+
+    page_manufacturers = manufacturer_list[0:page_size]
 
     msg_model = await message.answer(
         text='Напишите <b>модель</b> вашего устройства 💻\n'
         'или выберите его из списка предложенных 👇',
-        reply_markup=await manufacturer_keyboard(state=state, manufacturer_pages_count=0),
+        reply_markup=await manufacturer_keyboard(page_manufacturers=page_manufacturers, manufacturer_pages_count=0),
     )
-    await state.update_data(msg_model=msg_model)
+    data['msg_model'] = msg_model
+    await state.set_data(data)
     bot_cmd_repair_logger.info('В state добавлено сообщение c моделями')
 
 
 @router_for_diagnostics.callback_query(Repair.model, F.data.startswith('page_manufacturer:'))
 async def handle_manufacturer_pages(callback: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
     manufacturer_pages_count = int(callback.data.split(':')[1])
+
+    manufacturer_list = data.get('manufacturer_list')
+    total_pages = (len(manufacturer_list) - 1) // page_size + 1
+
+    if manufacturer_pages_count < 0:
+        manufacturer_pages_count = total_pages - 1
+    elif manufacturer_pages_count >= total_pages:
+        manufacturer_pages_count = 0
+
+    start_indx = manufacturer_pages_count * page_size
+    end_indx = start_indx + page_size
+    page_manufacturers = manufacturer_list[start_indx:end_indx]
 
     try:
         await callback.message.edit_reply_markup(reply_markup=await manufacturer_keyboard(
-            state=state,
+            page_manufacturers=page_manufacturers,
             manufacturer_pages_count=manufacturer_pages_count
         )
                                                  )
@@ -91,15 +130,26 @@ async def handle_manufacturer_pages(callback: CallbackQuery, state: FSMContext) 
 
 
 @router_for_diagnostics.callback_query(Repair.model, F.data.startswith('manufacturer:'))
-async def handle_manufacturer_selected(callback: CallbackQuery, state: FSMContext) -> None:
+@inject
+async def handle_manufacturer_selected(callback: CallbackQuery, state: FSMContext,
+                                       device_type_service: DeviceTypeService = Provide[
+                                           Container.device_type_service
+                                       ]) -> None:
     manufacturer_id = callback.data.split(':')[1]
     await state.update_data(manufacturer=manufacturer_id)
     bot_cmd_repair_logger.info(f'В state сохранен manufacturer c id:{manufacturer_id}')
+
+    device_type_dto = await device_type_service.get_all()
+    device_type_list = [row.model_dump() for row in device_type_dto]
+    await state.update_data(device_type_list=device_type_list)
+    page_devices_type = device_type_list[0:page_size]
+
     await callback.message.edit_reply_markup(reply_markup=await device_type_keyboard(
-        state=state,
+        page_devices_type=page_devices_type,
         device_type_pages_count=0
     )
                                              )
+    bot_cmd_repair_logger.info(f'В state добавлен {device_type_list=}')
     await callback.answer()
 
 
@@ -120,10 +170,23 @@ async def handle_manufacturer_exit(callback: CallbackQuery, state: FSMContext) -
 @router_for_diagnostics.callback_query(Repair.model, F.data.startswith('page_device_type:'))
 async def handle_device_type_pages(callback: CallbackQuery, state: FSMContext) -> None:
     device_type_pages_count = int(callback.data.split(':')[1])
+    data = await state.get_data()
+    device_type_list = data.get('device_type_list')
+
+    total_pages = (len(device_type_list) - 1) // page_size + 1
+
+    if device_type_pages_count < 0:
+        device_type_pages_count = total_pages - 1
+    elif device_type_pages_count >= total_pages:
+        device_type_pages_count = 0
+
+    start_indx = device_type_pages_count * page_size
+    end_indx = start_indx + page_size
+    page_devices_type = device_type_list[start_indx:end_indx]
 
     try:
         await callback.message.edit_reply_markup(reply_markup=await device_type_keyboard(
-            state=state,
+            page_devices_type=page_devices_type,
             device_type_pages_count=device_type_pages_count
         )
                                                  )
@@ -134,13 +197,37 @@ async def handle_device_type_pages(callback: CallbackQuery, state: FSMContext) -
 
 
 @router_for_diagnostics.callback_query(Repair.model, F.data.startswith('device_type:'))
-async def handle_device_type_selected(callback: CallbackQuery, state: FSMContext) -> None:
+@inject
+async def handle_device_type_selected(callback: CallbackQuery, state: FSMContext,
+                                      manufacturer_device_type_service: ManufacturerDeviceTypeService = Provide[
+                                          Container.manufacturer_device_type_service
+                                      ],
+                                      device_service: DeviceService = Provide[Container.device_service]
+                                      ) -> None:
     device_type_id = callback.data.split(':')[1]
-    await state.update_data(device_type=device_type_id)
+    data = await state.get_data()
+    data['device_type'] = device_type_id
     bot_cmd_repair_logger.info(f'В state добавлен device_type с id: {device_type_id}')
 
+    manufacturer = data.get('manufacturer')
+    device_type = data.get('device_type')
+
+    manufacturer_device_type_dto = ManufacturerDeviceTypePartialDTO(manufacturer_id=manufacturer,
+                                                                    device_type_id=device_type
+                                                                    )
+    manufacturer_device_type_res = await manufacturer_device_type_service.get(
+        model_dto=manufacturer_device_type_dto
+    )
+    device_dto = DevicePartialDTO(manufacturer_device_type_id=manufacturer_device_type_res[0].id)
+    device_res = await device_service.get(model_dto=device_dto)
+    device_list = [row.model_dump() for row in device_res]
+    await state.update_data(device_list=device_list)
+    bot_cmd_repair_logger.info(f'В state добавлен {device_list=}')
+
+    page_devices = device_list[0:page_size]
+
     await callback.message.edit_reply_markup(reply_markup=await device_keyboard(
-        state=state,
+        page_devices=page_devices,
         device_pages_count=0
     )
                                              )
@@ -150,12 +237,15 @@ async def handle_device_type_selected(callback: CallbackQuery, state: FSMContext
 @router_for_diagnostics.callback_query(Repair.model, F.data == 'exit_device_type')
 async def device_type_exit(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
+    manufacturer_list = data.get('manufacturer_list')
     del data['device_type_list']
-    del data['manufacturer_list']
     await state.set_data(data)
-    bot_cmd_repair_logger.info('Из state удалены device_type_list и manufacturer_list')
+    bot_cmd_repair_logger.info('Из state удален device_type_list')
+
+    page_manufacturers = manufacturer_list[0:page_size]
+
     await callback.message.edit_reply_markup(reply_markup=await manufacturer_keyboard(
-        state=state,
+        page_manufacturers=page_manufacturers,
         manufacturer_pages_count=0
     ))
 
@@ -163,10 +253,23 @@ async def device_type_exit(callback: CallbackQuery, state: FSMContext) -> None:
 @router_for_diagnostics.callback_query(Repair.model, F.data.startswith('page_device:'))
 async def device_pages(callback: CallbackQuery, state: FSMContext) -> None:
     device_pages_count = int(callback.data.split(':')[1])
+    data = await state.get_data()
+    device_list = data.get('device_list')
+
+    total_pages = (len(device_list) - 1) // page_size + 1
+
+    if device_pages_count < 0:
+        device_pages_count = total_pages - 1
+    elif device_pages_count >= total_pages:
+        device_pages_count = 0
+
+    start_indx = device_pages_count * page_size
+    end_indx = start_indx + page_size
+    page_devices = device_list[start_indx:end_indx]
 
     try:
         await callback.message.edit_reply_markup(reply_markup=await device_keyboard(
-            state=state,
+            page_devices=page_devices,
             device_pages_count=device_pages_count
         )
                                                  )
@@ -178,7 +281,12 @@ async def device_pages(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router_for_diagnostics.callback_query(Repair.model, F.data.startswith('device:'))
-async def handle_device_selected(callback: CallbackQuery, state: FSMContext) -> None:
+@inject
+async def handle_device_selected(callback: CallbackQuery, state: FSMContext,
+                                 device_service_service: DeviceServiceService = Provide[
+                                     Container.device_service_service],
+                                 service_service: ServiceService = Provide[Container.service_service]
+                                 ) -> None:
     device_id = int(callback.data.split(':')[1])
     await state.update_data(device_id=device_id)
     bot_cmd_repair_logger.info(f'В state добавлен device с id: {device_id}')
@@ -199,10 +307,36 @@ async def handle_device_selected(callback: CallbackQuery, state: FSMContext) -> 
         bot_cmd_repair_logger.info(f'В state добавлено id сообщения: {msg_device_name=}')
 
     else:
-        await state.set_state(Repair.defect)
+        device_id = data.get('device_id')
+        device_service_list = await device_service_service.get(
+            DeviceServicePartialDTO(device_id=device_id)
+        )
+
+        service_id_list = [
+            model_device_service.service.id
+            for model_device_service in device_service_list
+        ]
+
+        service_breaking_dto_list = await service_service.get(
+            ServiceIdListDTO(id=service_id_list)
+        )
+        breaking_list = list(
+            {
+                (res.id, res.name)
+                for breaking_list in service_breaking_dto_list
+                for res in breaking_list.breakings
+            }
+        )
+        breaking_list = sorted(breaking_list, key=lambda x: x[0])
+
+        await state.update_data(breaking_list=breaking_list)
+        bot_cmd_repair_logger.info(f'В state добавлен {breaking_list=}')
+
+        page_breakings = breaking_list[0:page_size]
+
         msg_breaking = await callback.message.answer('🛠Выберите <b>проблему</b> из списка\n'
                                                      'Либо опишите ее, если не нашли подходящую',
-                                                     reply_markup=await breaking_keyboard(state=state,
+                                                     reply_markup=await breaking_keyboard(page_breakings=page_breakings,
                                                                                           breaking_pages_count=0)
                                                      )
         await state.update_data(msg_breaking=msg_breaking)
@@ -210,17 +344,21 @@ async def handle_device_selected(callback: CallbackQuery, state: FSMContext) -> 
         bot_cmd_repair_logger.info('В state добавлено сообщение поломок и название устройства')
         await callback.message.delete()
         await callback.answer()
+        await state.set_state(Repair.defect)
 
 
 @router_for_diagnostics.callback_query(Repair.model, F.data == 'exit_device')
 async def handle_device_exit(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
     del data['device_list']
+    device_type_list = data.get('device_type_list')
     await state.set_data(data)
     bot_cmd_repair_logger.info('Из state удален device_list')
 
+    page_devices_type_list = device_type_list[0:page_size]
+
     await callback.message.edit_reply_markup(reply_markup=await device_type_keyboard(
-        state=state,
+        page_devices_type=page_devices_type_list,
         device_type_pages_count=0
     )
                                              )
@@ -230,7 +368,11 @@ async def handle_device_exit(callback: CallbackQuery, state: FSMContext) -> None
 @router_for_diagnostics.message(Repair.model)
 @inject
 async def handle_model_selection(message: Message, state: FSMContext,
-                                 device_service: DeviceService = Provide[Container.device_service]) -> None:
+                                 device_service: DeviceService = Provide[Container.device_service],
+                                 device_service_service: DeviceServiceService = Provide[
+                                     Container.device_service_service],
+                                 service_service: ServiceService = Provide[Container.service_service]
+                                 ) -> None:
     data = await state.get_data()
     msg_model = data.get('msg_model')
     msg_device_name = data.get('msg_device_name')
@@ -269,13 +411,41 @@ async def handle_model_selection(message: Message, state: FSMContext,
             bot_cmd_repair_logger.info(f'В state добавлено id устройства: {device_id} и'
                                        f' полное название введенное устройства: {message.text}')
 
-        await state.set_state(Repair.defect)
+        device_id = data.get('device_id')
+        device_service_list = await device_service_service.get(
+            DeviceServicePartialDTO(device_id=device_id)
+        )
+
+        service_id_list = [
+            model_device_service.service.id
+            for model_device_service in device_service_list
+        ]
+
+        service_breaking_dto_list = await service_service.get(
+            ServiceIdListDTO(id=service_id_list)
+        )
+        breaking_list = list(
+            {
+                (res.id, res.name)
+                for breaking_list in service_breaking_dto_list
+                for res in breaking_list.breakings
+            }
+        )
+        breaking_list = sorted(breaking_list, key=lambda x: x[0])
+
+        await state.update_data(breaking_list=breaking_list)
+        bot_cmd_repair_logger.info(f'В state добавлен {breaking_list=}')
+
+        page_breakings = breaking_list[0:page_size]
+
         msg_breaking = await message.answer('🛠️ Выберите <b>проблему</b> из списка\n'
                                             'Либо опишите ее, если не нашли подходящую',
-                                            reply_markup=await breaking_keyboard(state=state, breaking_pages_count=0))
+                                            reply_markup=await breaking_keyboard(page_breakings=page_breakings,
+                                                                                 breaking_pages_count=0))
         await state.update_data(msg_breaking=msg_breaking)
         await state.update_data(device_name=message.text)
         bot_cmd_repair_logger.info('В state добавлено сообщение поломок и название устройства')
+        await state.set_state(Repair.defect)
 
     except ValidationError as e:
         bot_cmd_repair_logger.info(f'Некорректные модель введена пользователем {message.text}: {e}')
@@ -285,9 +455,24 @@ async def handle_model_selection(message: Message, state: FSMContext,
 @router_for_diagnostics.callback_query(Repair.defect, F.data.startswith('page_breaking:'))
 async def handle_breaking_pages(callback: CallbackQuery, state: FSMContext) -> None:
     breaking_pages_count = int(callback.data.split(':')[1])
+    data = await state.get_data()
+    breaking_list = data.get('breaking_list')
+
+    total_pages = (len(breaking_list) - 1) // page_size + 1
+
+    if breaking_pages_count < 0:
+        breaking_pages_count = total_pages - 1
+    elif breaking_pages_count >= total_pages:
+        breaking_pages_count = 0
+
+    start_idx = breaking_pages_count * page_size
+    end_idx = start_idx + page_size
+
+    page_breakings = breaking_list[start_idx:end_idx]
+
     try:
         await callback.message.edit_reply_markup(reply_markup=await breaking_keyboard(
-            state=state,
+            page_breakings=page_breakings,
             breaking_pages_count=breaking_pages_count
         )
                                                  )
@@ -346,6 +531,7 @@ async def handle_exit_breaking(callback: CallbackQuery, state: FSMContext) -> No
     data = await state.get_data()
     del data['breaking_list']
     del data['device_id']
+    device_list = data.get('device_list')
     bot_cmd_repair_logger.info('Из state удалено breaking_list и device_id')
     device_description = data.get('device_description')
     if device_description:
@@ -353,10 +539,13 @@ async def handle_exit_breaking(callback: CallbackQuery, state: FSMContext) -> No
         bot_cmd_repair_logger.info('Из state удален device_description')
 
     await callback.message.delete()
+
+    page_devices = device_list[0:page_size]
+
     msg_model = await callback.message.answer(text='Напишите <b>модель</b> вашего устройства 💻\n'
                                                    'или выберите его из списка предложенных 👇',
                                               reply_markup=await device_keyboard(
-                                                  state=state,
+                                                  page_devices=page_devices,
                                                   device_pages_count=0
                                               )
     )
@@ -453,6 +642,7 @@ async def handle_exit_city(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
     msg_price = data.get('msg_price')
     breaking_description = data.get('breaking_description')
+    breaking_list = data.get('breaking_list')
 
     if msg_price:
         await msg_price.delete()
@@ -464,9 +654,12 @@ async def handle_exit_city(callback: CallbackQuery, state: FSMContext) -> None:
         bot_cmd_repair_logger.info('Из state удален breaking_description')
 
     await callback.message.delete()
+
+    page_breakings = breaking_list[0:page_size]
+
     msg_breaking = await callback.message.answer(text='🛠 Выберите <b>проблему</b> из списка\n'
                                                  'Либо опишите ее, если не нашли подходящую',
-                                                 reply_markup=await breaking_keyboard(state=state,
+                                                 reply_markup=await breaking_keyboard(page_breakings=page_breakings,
                                                                                       breaking_pages_count=0)
                                                  )
 

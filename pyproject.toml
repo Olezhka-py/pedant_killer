@@ -11,25 +11,19 @@ python = "^3.12"
 pydantic = "^2.8.2"
 aiogram = "^3.10.0"
 pydantic-settings = "^2.3.4"
-sqlalchemy = {extras = ["mypy"], version = "^2.0.37"}
+sqlalchemy = {extras = ["postgresql-asyncpg"], version = "^2.0.40"}
 alembic = "^1.13.2"
 asyncpg = "^0.29.0"
-psycopg = {extras = ["binary", "pool"], version = "^3.2.1"}
-psycopg2-binary = "^2.9.9"
-greenlet = "^3.0.3"
-requests = "^2.32.3"
-mypy = "^1.13.0"
 dependency-injector = "^4.45.0"
 phonenumbers = "^8.13.54"
-pytest = "^8.3.4"
-pytest-asyncio = "^0.25.3"
 numpy = "^2.2.4"
 pandas = "^2.2.3"
+requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
 black = "^24.4.2"
-mypy = "^1.14.1"
+pytest-asyncio = "^0.26.0"
 
 [tool.poetry.scripts]
 bot = "pedant_killer.main:main"
@@ -37,15 +31,6 @@ bot = "pedant_killer.main:main"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-#[tool.mypy]
-#python_version = "3.12"
-#strict = true
-#show_error_codes = true
-#warn_unused_configs = true
-#warn_unused_ignores = true
-#exclude = "tests/"
-#plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
