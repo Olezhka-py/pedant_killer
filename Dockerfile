@@ -14,4 +14,4 @@ RUN pipx run poetry install --no-root
 
 COPY . .
 
-CMD ["sh", "-c", "alembic upgrade head && poetry run bot"]
+CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run bot"]
