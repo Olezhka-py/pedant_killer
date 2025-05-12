@@ -1,20 +1,20 @@
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y curl build-essential \
- && pip install pipx \
- && pipx install poetry \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    && pip install pipx \
+    && pipx install poetry \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Убедитесь, что poetry доступен в PATH для оболочки
 ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock* ./
 
-RUN pipx run poetry install --no-root
+RUN poetry install --no-root
 
 COPY . .
 
-CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run bot"]
+# Команда для запуска миграций и бота
+CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run python bot.py"]
