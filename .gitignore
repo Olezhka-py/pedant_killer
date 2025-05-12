@@ -164,3 +164,4 @@ cython_debug/
 
 .DS_Store
 
+pedant_killer/services/test_service.py
