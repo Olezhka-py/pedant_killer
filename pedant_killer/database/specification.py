@@ -26,7 +26,7 @@ class Specification(ABC):
 class ObjectExistsByRowsSpecification(Specification):
 
     @classmethod
-    async def is_satisfied(cls, model, rows: dict[str, Any]) -> BinaryExpression | None:
+    def is_satisfied(cls, model, rows: dict[str, Any]) -> BinaryExpression | None:
         if not rows:
             return and_()
 

@@ -14,8 +14,7 @@ class Container(containers.DeclarativeContainer):
         modules=[
             'pedant_killer.telegram_bot.handlers.base_commands',
             'pedant_killer.telegram_bot.handlers.repair_or_diagnostic',
-            'pedant_killer.telegram_bot.handlers.status_order',
-            'pedant_killer.telegram_bot.keyboards.device_models'
+            'pedant_killer.telegram_bot.handlers.status_order'
         ],
     )
 
