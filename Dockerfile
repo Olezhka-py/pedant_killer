@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y curl build-essential \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# Убедитесь, что poetry доступен в PATH для оболочки
+ENV PATH="/root/.local/bin:$PATH"
+
 WORKDIR /app
 
 COPY pyproject.toml poetry.lock* ./
