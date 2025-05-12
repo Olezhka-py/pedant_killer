@@ -16,5 +16,4 @@ RUN poetry install --no-root
 
 COPY . .
 
-# Команда для запуска миграций и бота
 CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run python bot.py"]
