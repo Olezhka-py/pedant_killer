@@ -44,13 +44,13 @@ class ObjectExistsByRowsSpecification(Specification):
 
 class OrderByRowsDefaultSpecification(Specification):
     @classmethod
-    async def is_satisfied(cls, model, rows: dict[str, Any]) -> None:
+    def is_satisfied(cls, model, rows: dict[str, Any]) -> None:
         return and_()
 
 
 class DeleteSpaceAndLowerCaseSpecification(Specification):
     @classmethod
-    async def is_satisfied(cls, model, rows: dict[str, Any]) -> BinaryExpression:
+    def is_satisfied(cls, model, rows: dict[str, Any]) -> BinaryExpression:
         conditions = []
         for key, value in rows.items():
             column = getattr(model, key)
