@@ -182,8 +182,8 @@ def upgrade() -> None:
     alembic_logger.info('Статичные данные добавлены в таблицы')
 
 
-    # ### end Alembic commands ###
 
+    # ### end Alembic commands ###
 
 def downgrade() -> None:
     conn = op.get_bind()

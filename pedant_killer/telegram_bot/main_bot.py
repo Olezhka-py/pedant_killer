@@ -19,6 +19,7 @@ async def run_bot() -> None:
     dp.include_router(router_for_diagnostics)
     bot_main_logger.info('Bot started')
     try:
+        print('бот вкл')
         await dp.start_polling(bot)
 
     finally:

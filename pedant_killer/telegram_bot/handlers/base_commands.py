@@ -23,6 +23,7 @@ bot_cmd_start_logger = logging.getLogger('bot_cmd_start_logger')
 async def cmd_start(message: Message, state: FSMContext,
                     user_service: UserService = Provide[Container.user_service]) -> None:
     await state.clear()
+    print('работает')
     user_get_result = await user_service.get(UserPartialDTO(telegram_id=message.from_user.id))
     if not user_get_result:
         await message.answer(

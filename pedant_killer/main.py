@@ -12,6 +12,7 @@ logging.basicConfig(
 
 
 def main() -> None:
+    print('старт бота')
     try:
         asyncio.run(run_bot())
     except KeyboardInterrupt:
