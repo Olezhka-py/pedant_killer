@@ -11,6 +11,7 @@ ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /pedant_killer
 
 COPY pyproject.toml poetry.lock* ./
+COPY README.md ./
 
 RUN poetry install || (echo "---------------- INSTALL LOG ----------------" && cat /root/.cache/pypoetry/log/install.log && false)
 
