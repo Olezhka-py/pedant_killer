@@ -31,8 +31,8 @@ class DeviceRepository(CoreRepository[DeviceOrm]):
                             joinedload(self._model_orm.manufacturer_device_type)
                             .joinedload(ManufacturerDeviceTypeOrm.device_type)
                         )
-                        .where(await specification_filter.is_satisfied(self._model_orm, rows))
-                        .order_by(await specification_sort.is_satisfied(self._model_orm, rows)))
+                        .where(specification_filter.is_satisfied(self._model_orm, rows))
+                        .order_by(specification_sort.is_satisfied(self._model_orm, rows)))
                 instance = await session.execute(stmt)
                 result = instance.scalars().all()
                 return result

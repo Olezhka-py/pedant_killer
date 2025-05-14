@@ -25,8 +25,8 @@ class ServiceRepository(CoreRepository[ServiceOrm]):
             async with self._session_factory() as session:
                 stmt = (select(self._model_orm)
                         .options(selectinload(self._model_orm.breakings))
-                        .where(await specification_filter.is_satisfied(self._model_orm, rows))
-                        .order_by(await specification_sort.is_satisfied(self._model_orm, rows)))
+                        .where(specification_filter.is_satisfied(self._model_orm, rows))
+                        .order_by(specification_sort.is_satisfied(self._model_orm, rows)))
                 instance = await session.execute(stmt)
                 result = instance.scalars().all()
                 database_logger.info(f'Данные из таблицы {self._model_orm} по {rows=} получены')
