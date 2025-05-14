@@ -16,4 +16,4 @@ RUN poetry install --no-root
 
 COPY . .
 
-CMD ["./entrypoint.sh"]
+CMD poetry run alembic upgrade head && poetry run bot
