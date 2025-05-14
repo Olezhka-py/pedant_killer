@@ -12,7 +12,7 @@ WORKDIR /pedant_killer
 
 COPY pyproject.toml poetry.lock* ./
 
-RUN poetry install
+RUN poetry install || (echo "---------------- INSTALL LOG ----------------" && cat /root/.cache/pypoetry/log/install.log && false)
 
 COPY . .
 
