@@ -17,4 +17,6 @@ RUN poetry install --no-root
 
 COPY . .
 
+RUN poetry install
+
 CMD poetry run alembic upgrade head && poetry run bot
