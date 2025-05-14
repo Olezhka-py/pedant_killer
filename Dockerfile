@@ -13,7 +13,7 @@ WORKDIR /pedant_killer
 COPY pyproject.toml poetry.lock* ./
 COPY README.md ./
 
-RUN poetry install --no root
+RUN poetry install --no-root
 
 COPY . .
 
