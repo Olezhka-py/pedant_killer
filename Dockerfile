@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y curl build-essential \
 
 ENV PATH="/root/.local/bin:$PATH"
 
-WORKDIR /app
+WORKDIR /pedant_killer
 
 COPY pyproject.toml poetry.lock* ./
 
@@ -16,4 +16,4 @@ RUN poetry install --no-root
 
 COPY . .
 
-CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run python bot.py"]
+CMD ["sh", "-c", "poetry run alembic upgrade head && poetry run bot"]
